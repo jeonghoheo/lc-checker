@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lc-postgres
+    environment:
+      POSTGRES_USER: lcuser
+      POSTGRES_PASSWORD: lcpass
+      POSTGRES_DB: lcchecker
+    ports:
+      - "5432:5432"
+    volumes:
+      - lc-data:/var/lib/postgresql/data
+
+volumes:
+  lc-data:
