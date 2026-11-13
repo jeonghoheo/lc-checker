@@ -36,6 +36,11 @@ plus a fee, so catching errors early is the whole point.
   AI call fails, the check still completes without the advisory.
   Live spot checks: set B rule 9 -> discrepancy, synthetic rule 11
   typo -> likely_typo.
+- Session 6 done: the web page now runs the full flow (upload, Korean
+  document types with extracted values, presentation date, check run
+  summary) and shows results with FAIL rows first, compared values,
+  SKIPPED reasons, a collapsed PASS list, and AI advisory notes.
+  Manual set B run showed 7 pass / 6 fail / 2 skipped.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -58,8 +63,9 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.
 - `PATCH /document-sets/:id/presentation-date` sets the presentation
   date; `POST /document-sets/:id/check` stores and returns a check run.
-- apps/web: one Korean page — create a set, upload files, see the list.
-  The check results are not shown in the UI yet.
+- apps/web: one Korean page for the full flow — create a set, upload
+  files, inspect extracted values, set the presentation date, run the
+  check, and review FAIL/SKIPPED/PASS results with AI advisory notes.
 
 ## Frozen scope (v1)
 - Text-layer PDF and text files only. NO OCR (real scans are v2).
@@ -93,10 +99,9 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-Session 3 value extraction, Session 4 rule engine, and Session 5 AI
-advisory review are done. Next is showing check results and `aiReview`
-advisories in the web review screen and adding the result report UI.
-Not started yet.
+The extraction, rule engine, AI advisory, and web review flow are all
+done. No next block is defined yet. The upload -> check -> results flow
+is complete in the web UI.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews

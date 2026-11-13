@@ -94,6 +94,330 @@ function countStatus(results: CheckResultItem[], status: CheckResultStatus) {
   return results.filter((result) => result.status === status).length
 }
 
+const RULE_NAMES: Record<number, string> = {
+  1: '선적 마감일',
+  2: '제시 기한 (21일)',
+  3: '신용장 만료일',
+  4: '보험 날짜',
+  5: '송장 금액 한도',
+  6: '총중량 일치',
+  7: '수량 일치',
+  8: '상자 수 일치',
+  9: '물품 설명 대응',
+  10: '항구 일치',
+  11: '수하인 일치',
+  12: '통지처 일치',
+  13: '요구 서류 구비',
+  14: '본선적재 표기',
+  15: '배서 (이번 버전 검사 제외)',
+}
+
+const AI_VERDICT_LABELS: Record<string, string> = {
+  corresponds: '같은 물품으로 보임',
+  discrepancy: '실제로 다름',
+  likely_typo: '오타로 보임',
+  different: '다른 회사로 보임',
+  unsure: '판단 보류',
+}
+
+type ComparisonSide = {
+  name: string
+  value: string
+}
+
+type Comparison = {
+  leftHeader: string
+  rightHeader: string
+  left: ComparisonSide
+  right: ComparisonSide
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function formatComparedValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return (
+      value
+        .map((item) =>
+          typeof item === 'string' ? item : formatExtractedValue(item),
+        )
+        .join(' / ') || '—'
+    )
+  }
+  return formatExtractedValue(value)
+}
+
+function detailLabel(
+  detail: Record<string, unknown>,
+  side: 'left' | 'right',
+  fallback: string,
+) {
+  const labels = isRecord(detail.labels) ? detail.labels : null
+  const label = labels?.[side]
+  return typeof label === 'string' && label ? label : fallback
+}
+
+function buildComparison(
+  ruleNo: number,
+  detail: Record<string, unknown>,
+): Comparison | null {
+  const compared = isRecord(detail.compared) ? detail.compared : null
+
+  if (!compared) {
+    return null
+  }
+
+  const pair = (
+    leftName: string,
+    leftValue: unknown,
+    rightName: string,
+    rightValue: unknown,
+  ): Comparison => ({
+    leftHeader: detailLabel(detail, 'left', '신용장·기준 값'),
+    rightHeader: detailLabel(detail, 'right', '서류 값'),
+    left: { name: leftName, value: formatComparedValue(leftValue) },
+    right: { name: rightName, value: formatComparedValue(rightValue) },
+  })
+
+  switch (ruleNo) {
+    case 1:
+      return pair(
+        '신용장 선적 마감일',
+        compared.latestShipmentDate,
+        '선하증권 본선적재일',
+        compared.shippedOnBoardDate,
+      )
+    case 2:
+      return pair(
+        '신용장 제시 기한',
+        `${formatComparedValue(compared.presentationDays)}일`,
+        '제시까지 걸린 날',
+        `${formatComparedValue(compared.days)}일`,
+      )
+    case 3:
+      return pair(
+        '신용장 만료일',
+        compared.expiryDate,
+        '제시일',
+        compared.presentationDate,
+      )
+    case 4:
+      return pair(
+        '선적일',
+        compared.shipmentDate,
+        '보험 발행일',
+        compared.insuranceIssueDate,
+      )
+    case 5: {
+      const lcAmount = `${formatComparedValue(compared.lcCurrency)} ${formatComparedValue(compared.lcAmount)}`
+      const maxAmount =
+        compared.maxAmount === undefined
+          ? ''
+          : ` (한도 ${formatComparedValue(compared.maxAmount)})`
+      const invoiceAmount = `${formatComparedValue(compared.invoiceCurrency)} ${formatComparedValue(compared.invoiceTotalAmount)}`
+
+      return pair(
+        '신용장 금액',
+        `${lcAmount}${maxAmount}`,
+        '송장 금액',
+        invoiceAmount,
+      )
+    }
+    case 6:
+      return pair(
+        '포장명세서 총중량',
+        `${formatComparedValue(compared.packingListTotalGrossWeightKg)} kg`,
+        '선하증권 총중량',
+        `${formatComparedValue(compared.billOfLadingTotalGrossWeightKg)} kg`,
+      )
+    case 7:
+      return pair(
+        '송장 수량',
+        compared.invoiceTotalQuantity,
+        '포장명세서 수량',
+        compared.packingListTotalQuantity,
+      )
+    case 8:
+      return pair(
+        '포장명세서 상자 수',
+        compared.packingListTotalCartons,
+        '선하증권 상자 수',
+        compared.billOfLadingTotalCartons,
+      )
+    case 9:
+      return pair(
+        '신용장 물품 설명',
+        compared.goodsDescription,
+        '송장 물품 설명',
+        compared.invoiceItemDescriptions,
+      )
+    case 10:
+      return pair(
+        '신용장 항구',
+        `선적: ${formatComparedValue(compared.lcPortOfLoading)}\n하적: ${formatComparedValue(compared.lcPortOfDischarge)}`,
+        '선하증권 항구',
+        `선적: ${formatComparedValue(compared.billOfLadingPortOfLoading)}\n하적: ${formatComparedValue(compared.billOfLadingPortOfDischarge)}`,
+      )
+    case 11:
+      return pair(
+        '신용장 신청인',
+        compared.lcApplicant,
+        '선하증권 수하인',
+        compared.billOfLadingConsignee,
+      )
+    case 12:
+      return pair(
+        '신용장 신청인',
+        compared.lcApplicant,
+        '선하증권 통지처',
+        compared.billOfLadingNotifyParty,
+      )
+    case 13:
+      return pair(
+        '신용장 요구 서류',
+        compared.requiredTypes,
+        '빠진 서류',
+        compared.missingTypes,
+      )
+    case 14:
+      return pair('필요한 표기', '본선적재 표기 있음', '선하증권 표기', '표기 없음')
+    default:
+      return null
+  }
+}
+
+function resultTitle(ruleNo: number) {
+  return RULE_NAMES[ruleNo] ?? `검사 ${ruleNo}`
+}
+
+function CheckResults({ run }: { run: CheckRun }) {
+  const [showPassed, setShowPassed] = useState(false)
+  const failed = run.results.filter((result) => result.status === 'FAIL')
+  const skipped = run.results.filter((result) => result.status === 'SKIPPED')
+  const passed = run.results.filter((result) => result.status === 'PASS')
+
+  return (
+    <div className="results">
+      <h3>불일치 {failed.length}개</h3>
+      {failed.length === 0 ? (
+        <p>불일치가 없습니다.</p>
+      ) : (
+        <ul className="result-list">
+          {failed.map((result) => {
+            const detail = result.detail ?? {}
+            const comparison = buildComparison(result.ruleNo, detail)
+            const aiReview = isRecord(detail.aiReview)
+              ? detail.aiReview
+              : null
+            const message =
+              typeof detail.message === 'string' ? detail.message : null
+            const verdict =
+              aiReview && typeof aiReview.verdict === 'string'
+                ? AI_VERDICT_LABELS[aiReview.verdict] ?? aiReview.verdict
+                : null
+            const reviewReason =
+              aiReview && typeof aiReview.reason === 'string'
+                ? aiReview.reason
+                : null
+
+            return (
+              <li
+                key={result.ruleNo}
+                className="result-row result-fail"
+              >
+                <div className="result-title">
+                  <span className="result-badge fail">불일치</span>
+                  <span className="rule-name">
+                    {resultTitle(result.ruleNo)}
+                  </span>
+                </div>
+                {comparison && (
+                  <div className="compare-grid">
+                    <div className="compare-column">
+                      <div className="compare-header">
+                        {comparison.leftHeader}
+                      </div>
+                      <div className="compare-name">
+                        {comparison.left.name}
+                      </div>
+                      <div className="compare-value">
+                        {comparison.left.value}
+                      </div>
+                    </div>
+                    <div className="compare-column">
+                      <div className="compare-header">
+                        {comparison.rightHeader}
+                      </div>
+                      <div className="compare-name">
+                        {comparison.right.name}
+                      </div>
+                      <div className="compare-value">
+                        {comparison.right.value}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {message && <p className="result-message">{message}</p>}
+                {verdict && (
+                  <div className="ai-note">
+                    <strong>AI 참고 의견:</strong> {verdict}
+                    {reviewReason ? ` — ${reviewReason}` : ''}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <h3>검사 못함 {skipped.length}개</h3>
+      {skipped.length === 0 ? (
+        <p>검사 못한 항목이 없습니다.</p>
+      ) : (
+        <ul className="result-list">
+          {skipped.map((result) => {
+            const detail = result.detail ?? {}
+            const reason =
+              typeof detail.reason === 'string' ? detail.reason : '이유 없음'
+
+            return (
+              <li
+                key={result.ruleNo}
+                className="result-row result-skipped"
+              >
+                <div className="result-title">
+                  <span className="result-badge skipped">검사 못함</span>
+                  <span className="rule-name">
+                    {resultTitle(result.ruleNo)}
+                  </span>
+                </div>
+                <p className="result-message">{reason}</p>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <h3>통과 {passed.length}개</h3>
+      <button type="button" onClick={() => setShowPassed((current) => !current)}>
+        {showPassed ? '통과한 검사 숨기기' : '통과한 검사 보기'}
+      </button>
+      {showPassed && (
+        <ul className="result-list">
+          {passed.map((result) => (
+            <li key={result.ruleNo} className="result-row result-pass">
+              <span className="result-badge pass">통과</span>
+              <span className="rule-name">{resultTitle(result.ruleNo)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const [setId, setSetId] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
@@ -374,11 +698,14 @@ function App() {
           검사 실행
         </button>
         {checkRun && (
-          <p className="check-summary">
-            검사 완료 — 통과 {countStatus(checkRun.results, 'PASS')}개 ·
-            불일치 {countStatus(checkRun.results, 'FAIL')}개 · 검사 못함{' '}
-            {countStatus(checkRun.results, 'SKIPPED')}개
-          </p>
+          <>
+            <p className="check-summary">
+              검사 완료 — 통과 {countStatus(checkRun.results, 'PASS')}개 ·
+              불일치 {countStatus(checkRun.results, 'FAIL')}개 · 검사 못함{' '}
+              {countStatus(checkRun.results, 'SKIPPED')}개
+            </p>
+            <CheckResults key={checkRun.id} run={checkRun} />
+          </>
         )}
       </section>
     </main>

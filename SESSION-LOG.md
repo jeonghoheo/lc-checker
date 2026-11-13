@@ -164,3 +164,9 @@
 - Tests: `npm run build` passed in `apps/web`; `npm run lint` passed.
 - Manual run: uploaded the four set B files through the page, saved presentation date `2026-12-25`, and ran the check. The page showed "검사 완료 — 통과 7개 · 불일치 6개 · 검사 못함 2개", matching the expected counts. The document list showed 신용장 / 상업송장 / 포장명세서 / 선하증권, and the extracted-value toggles rendered key-value rows.
 - Notes: No new styling library was added. No failures.
+
+## Block 11 — Results view (what does not match, first) (2026-11-13)
+- Done: Added the results view below the summary. FAIL rows come first with Korean rule names, the two compared values side by side under "신용장·기준 값" / "서류 값", the stored result message, and an AI advisory note when present. SKIPPED rows show the stored reason, and PASS rows are collapsed behind the "통과한 검사 보기" toggle.
+- Tests: `npm run build` passed in `apps/web`; `npm run lint` passed.
+- Manual run: the same set B flow showed "검사 완료 — 통과 7개 · 불일치 6개 · 검사 못함 2개". The page showed 6 FAIL rows first in rule order 1, 2, 6, 8, 9, 12 with both values visible, then 2 SKIPPED rows. Rule 9 showed the AI note: "AI 참고 의견: 실제로 다름 — The invoice omits the LC word \"AIRLESS\" from the pump bottles description, so the goods description does not correspond to the LC." Expanding the PASS toggle showed 7 passing checks.
+- Notes: No failures. Session 6 is complete.

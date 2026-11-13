@@ -16,6 +16,7 @@
 - Sessions 3-4 complete: extraction (5 document types) and the 15-rule engine. Scoring: planted errors 12 / 12, zero false positives.
 - Session 5 complete: AI second opinion (aiReview) stored on FAIL results of rules 9, 11, 12. Live spot checks: set B rule 9 -> "discrepancy"; one-letter company-name typo -> "likely_typo".
 - Block 10 — full web flow (done 2026-11-13)
+- Block 11 — results view (done 2026-11-13); session 6 complete.
 
 ## Design rules for all screens (owner's standing rules)
 - Korean UI. Plain, short sentences. No abbreviation without spelling it out once.
@@ -33,7 +34,7 @@ In apps/web, extend the existing upload page into the full flow on one page, in 
 - Handle errors plainly: if the API call fails, show "검사에 실패했습니다. 서버가 켜져 있는지 확인해 주세요." style messages, never raw error JSON.
 - Verify: `npm run build` in apps/web passes, and record a manual run in the log (upload the four set B files through the page, set presentation date 2026-12-25, run the check, and write down the summary counts the page showed — expected: 통과 7 · 불일치 6 · 검사 못함 2).
 
-## Block 11 — Results view (what does not match, first)
+## Block 11 — Results view (what does not match, first) (done)
 
 Below the summary line from Block 10, render the check results:
 - Order: 불일치(FAIL) first, then 검사 못함(SKIPPED), then 통과(PASS) as a collapsed list (a "통과한 검사 보기" toggle).

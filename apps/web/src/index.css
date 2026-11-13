@@ -133,3 +133,107 @@ section + section {
   font-weight: 600;
   margin-top: 12px;
 }
+
+.results {
+  margin-top: 24px;
+}
+
+.results h3 {
+  font-size: 1.05rem;
+  margin: 20px 0 8px;
+}
+
+.result-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.result-row {
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.result-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.result-badge {
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.result-badge.fail {
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.result-badge.skipped {
+  background: #fff4e5;
+  color: #8a5300;
+}
+
+.result-badge.pass {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.rule-name {
+  font-weight: 600;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.compare-column {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px;
+  min-width: 0;
+}
+
+.compare-header {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.compare-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.compare-value {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.result-message {
+  margin: 6px 0;
+}
+
+.ai-note {
+  background: #f3f6ff;
+  border-left: 3px solid #5c6bc0;
+  padding: 6px 8px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 520px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
