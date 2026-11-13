@@ -181,3 +181,9 @@
 - Tests: passed 47 / total 47 (vitest unit), passed 10 / total 10 (e2e), `npm run build` and `npm run lint` passed in `apps/web`.
 - Full local verification: stopped the API/web processes, ran `docker compose down` then `docker compose up -d`, started the API and web app, ran all suites above, then ran one manual browser flow with the four set A files and presentation date `2026-12-10`. The page ended with "검사 완료 — 통과 13개 · 불일치 0개 · 검사 못함 2개" and 0 FAIL rows. The report button also downloaded `lc-report-<setId>.html`.
 - Notes: v1 is complete. Git tag `v1.0.0` is created on the final commit. No failures.
+
+## Block 14 — Any OpenAI-compatible LLM (2026-11-13)
+- Done: Switched the LLM config path to generic `LLM_API_KEY`, `LLM_BASE_URL` (default `https://api.deepseek.com`), and `LLM_MODEL` (default `deepseek-chat`), with fallback to `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`. The chat-completions URL is built from the base URL, so OpenAI, OpenRouter, Qwen-compatible endpoints, and local LiteLLM proxies work. Updated `.env.example` and README wording. Added unit tests for the custom base URL and the legacy fallback.
+- Tests: passed 49 / total 49 (vitest unit), passed 10 / total 10 (e2e). Lint has no errors.
+- Live check: ran one invoice extraction with the real API through the new config path. `LLM_*` was unset, so the key came from `DEEPSEEK_API_KEY`, the base URL came from the default `https://api.deepseek.com`, and the model came from the default `deepseek-chat`. The set A invoice extracted as `HB-INV-2026-041`, USD `48000`.
+- Notes: v1.0.1 tag is created on the final commit. No failures.

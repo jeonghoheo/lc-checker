@@ -9,7 +9,7 @@
 ## 무엇을 하나요?
 
 1. **서류 올리기** — 신용장, 상업송장, 포장명세서, 선하증권, 보험증서를 올립니다.
-2. **값 뽑기** — 텍스트 파일과 PDF의 글자 층에서 값을 읽습니다. 형식이 일정한 신용장은 코드로, 나머지 서류는 DeepSeek API로 값을 뽑고 코드로 다시 검증합니다.
+2. **값 뽑기** — 텍스트 파일과 PDF의 글자 층에서 값을 읽습니다. 형식이 일정한 신용장은 코드로, 나머지 서류는 OpenAI 호환 LLM API로 값을 뽑고 코드로 다시 검증합니다. 기본 제공자는 DeepSeek입니다.
 3. **규칙 대조** — 날짜, 금액, 수량, 중량, 상자 수, 항구, 이름, 서류 구비 여부를 정해진 규칙으로 비교합니다. 비교 자체는 모두 일반 코드로 실행됩니다.
 
 ## 화면
@@ -47,9 +47,14 @@ npm install
 
 ```dotenv
 DATABASE_URL="postgresql://lcuser:lcpass@localhost:5432/lcchecker?schema=public"
-DEEPSEEK_API_KEY=your-deepseek-api-key
-DEEPSEEK_MODEL=deepseek-chat
+
+# 어떤 OpenAI 호환 API든 사용할 수 있습니다. 기본값은 DeepSeek입니다.
+LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-chat
 ```
+
+기존 `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` 이름도 fallback으로 계속 동작합니다. OpenAI, OpenRouter, Qwen 호환 엔드포인트, 로컬 LiteLLM 프록시도 사용할 수 있습니다. 주소 예시는 `apps/api/.env.example`에 있습니다.
 
 데이터베이스 스키마를 적용하고 API를 실행합니다.
 
@@ -116,5 +121,6 @@ npm run dev
 - **15개 규칙은 UCP 600 실무의 일부입니다.** ISBP(국제표준은행관행)는 포함하지 않았습니다.
 - **규칙 15(배서)는 이번 버전에서 검사하지 않습니다.**
 - **원산지증명서는 이번 버전에서 올릴 수 없습니다.** 신용장이 원산지증명서를 요구하면 규칙 13에서 빠진 서류로 표시됩니다.
+- **값 추출 품질은 DeepSeek로만 검증했습니다.** 다른 모델은 아직 검증하지 않았습니다.
 - **화면은 한국어만 지원합니다.** 영어 화면은 v2에서 계획하고 있습니다.
 - **이 도구는 미리 점검 도구입니다.** 최종 서류 심사와 지급 판정은 은행이 합니다. 보고서 마지막 줄에도 같은 안내를 넣었습니다.

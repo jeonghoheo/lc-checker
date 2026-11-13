@@ -1,4 +1,4 @@
-# SESSION.md — Session 7 work orders (final session of v1)
+# SESSION.md — Post-v1 work orders (written by the reviewer, executed by OpenCode)
 
 ## Working rules (fixed)
 - When the owner says "Run Block N", execute only Block N below. One block at a time.
@@ -10,26 +10,31 @@
   - Notes: ...
 - Then commit and push the code changes together with SESSION-LOG.md.
 - If something fails, do not guess a fix. Record the failure output in the log as-is and stop.
-- At the end of the last block of a session, also update the Current status section of AGENTS.md and push it together.
 
 ## Done so far
-- Sessions 3-5 complete: extraction (5 types), 15-rule engine (scoring 12/12, zero false positives), AI second opinion on rules 9/11/12.
-- Session 6 complete: full web flow — upload, extracted values, presentation date, check run, results view (FAIL first, both values side by side, AI note shown). Manual set B run on the page matched the expected counts and rows.
-- Block 12 — downloadable discrepancy report (done 2026-11-13)
-- Block 13 — README and v1 wrap-up (done 2026-11-13); v1 complete.
+- v1.0.0 complete and tagged (2026-11-13): extraction, 15-rule engine (scoring 12/12), AI second opinion, web flow, report download, README.
+- LICENSE (MIT) file is in the repo folder, waiting for the owner's commit line together with repository topics.
+- Block 14 — provider-neutral LLM config (done 2026-11-13)
 
-## Block 12 — Downloadable discrepancy report (done)
+## Block 14 — Any OpenAI-compatible LLM, not just DeepSeek (done)
 
-In apps/api + apps/web:
-- Add `GET /document-sets/:id/report` that returns the latest check run of the set as one self-contained HTML file download (Content-Disposition attachment, filename like `lc-report-<setId>.html`). If the set has no check run yet, return 400 with a plain message.
-- Report content (Korean, printable from a browser): title "신용장 서류 미리 점검 보고서", the LC number and presentation date, the summary counts (통과/불일치/검사 못함), then a table of FAIL rows (rule name in Korean — same mapping as the web results view, both compared values, message, AI note when present), SKIPPED rows with reasons, and PASS rule names in one line each.
-- The last line of the report must be this honesty notice, exactly: "이 보고서는 은행에 서류를 내기 전에 미리 점검한 결과입니다. 은행의 최종 판정을 보장하지 않습니다."
-- In apps/web, add a "보고서 받기" button next to "검사 실행" that downloads the report for the current set (disabled until a check has run).
-- Tests: one e2e test that seeds a set with a known FAIL (reuse the set B fixtures), runs the check, downloads the report, and asserts the HTML contains the rule 1 FAIL values and the honesty notice. `npm run build` in apps/web must pass.
+Owner's point: the .env.example and README read as if only DeepSeek works. The API is OpenAI-compatible, so make that real in code and honest in words.
 
-## Block 13 — README and v1 wrap-up (final block) (done)
+In apps/api:
+- Introduce generic env names: `LLM_API_KEY`, `LLM_BASE_URL` (default `https://api.deepseek.com`), `LLM_MODEL` (default `deepseek-chat`). AiExtractionService and AiReviewService must build their request URL from LLM_BASE_URL and read key/model from the LLM_* names.
+- Backward compatibility: if an LLM_* variable is unset, fall back to the existing DEEPSEEK_API_KEY / DEEPSEEK_MODEL so the owner's current .env keeps working untouched.
+- Update .env.example: list the LLM_* variables with comments saying any OpenAI-compatible endpoint works, with examples — DeepSeek (default, https://api.deepseek.com), OpenAI (https://api.openai.com/v1), OpenRouter (https://openrouter.ai/api/v1), a local LiteLLM proxy (http://localhost:4000/v1).
+- Tests: all existing mocked tests must pass unchanged; add one unit test proving the request URL is built from LLM_BASE_URL (e.g. a custom base URL appears in the mocked client's call).
+- Live check: run ONE invoice extraction with the real API through the new config path (the owner's existing key via the DEEPSEEK_* fallback is fine) and record in the log which env path supplied the key/base URL and the extracted invoice number/total.
+- README: change the setup and "what it does" wording from DeepSeek-only to "an OpenAI-compatible LLM API (DeepSeek by default; OpenAI, OpenRouter, Qwen-compatible endpoints, or a local LiteLLM proxy also work)". Add one honest line to the limits section: "Extraction quality is validated with DeepSeek only; other models are untested."
+- Create git tag `v1.0.1` on the final commit and push it.
+Run the tests and show me the results.
 
-- Rewrite the repository README.md (Korean main text, short English summary at the top): what the tool does in 3 plain steps (서류 올리기 -> 값 뽑기 -> 규칙 대조), a screenshot placeholder section (leave the headings, no fake images), how to run locally (docker compose, api, web, .env with DEEPSEEK_API_KEY), the 15 rules table with their UCP 600 basis, the scoring result (sample sets A/B/C, planted errors 12/12, traps with zero false positives), and an honest limits section listing: text-layer PDF/text files only (no OCR for scanned documents), the 15 rules are a subset of UCP 600 practice (ISBP not included), rule 15 (endorsement) is not checked in v1, a certificate of origin cannot be uploaded in v1, Korean UI only (English UI planned for v2), and the tool is a pre-check that does not guarantee a bank's decision.
-- Full local verification, recorded in the log: from a clean state, `docker compose up -d`, start api and web, run the whole test suites (api unit + e2e, web build + lint), then one manual browser flow with set A files ending in "불일치 0개".
-- Create git tag `v1.0.0` on the final commit and push the tag.
-- Update AGENTS.md Current status: v1 complete. Push everything together.
+## Block 15 — English and Russian README versions
+
+Documentation only; the app UI stays Korean in v1 (owner's decision — UI languages are a v2 topic).
+
+- Create `README.en.md`: a full English version of the current README.md — same structure and facts (3-step flow, local setup, the 15-rule table with UCP 600 references, A/B/C scoring results, honest limits). Translate faithfully; keep the honesty/limits wording precise, not softer. After Block 14, the LLM wording must be the new provider-neutral wording in all versions.
+- Create `README.ru.md`: the same content in Russian.
+- Add a language line at the very top of all three files: `한국어 | [English](README.en.md) | [Русский](README.ru.md)` — in README.en.md link back to README.md as 한국어, and likewise in README.ru.md.
+- No code changes in this block. Verify the three files render (headings/tables intact) and commit + push together.
