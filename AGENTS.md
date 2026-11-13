@@ -16,8 +16,9 @@ plus a fee, so catching errors early is the whole point.
   document-type detection on upload, and an MT700 LC parser that
   stores structured values in Document.extractedData (JSONB).
   GET document-set returns both docType and extractedData.
-- Block 3 extra check is blocked: samples/set-b/lc-mt700.txt does
-  not exist yet, so set B could not be parsed and compared.
+- Block 3 extra check passed on samples/set-c/lc-mt700.txt: the
+  parsed documentsRequired includes CERTIFICATE OF ORIGIN, so the
+  parser reads the actual file rather than hardcoded set A values.
 - No rule engine and no AI calls yet.
 
 ## How to run

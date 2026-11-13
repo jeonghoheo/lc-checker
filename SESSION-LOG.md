@@ -19,3 +19,19 @@
   Error: ENOENT: no such file or directory, open '../../samples/set-b/lc-mt700.txt'
   ```
   Stopped as required; no unverified fix or set B values were invented.
+- Extra check (corrected): ran the same parser on `samples/set-c/lc-mt700.txt`. The extracted `documentsRequired` was:
+  ```
+  1. SIGNED COMMERCIAL INVOICE IN 3 COPIES INDICATING L/C NO. HNBC-260781-KR.
+  2. PACKING LIST IN 3 COPIES INDICATING GROSS AND NET WEIGHTS AND NUMBER OF CARTONS.
+  3. FULL SET (3/3) OF CLEAN ON BOARD OCEAN BILLS OF LADING CONSIGNED TO
+     NORDLYS COSMETICS GMBH, NOTIFY PARTY NORDLYS COSMETICS GMBH,
+     SPEICHERSTADT 12, 20457 HAMBURG, GERMANY, MARKED FREIGHT PREPAID AND
+     EVIDENCING SHIPMENT FROM BUSAN PORT, REPUBLIC OF KOREA TO HAMBURG
+     PORT, GERMANY.
+  4. INSURANCE CERTIFICATE IN 2 COPIES, COVERING INSTITUTE CARGO CLAUSES (A)
+     FOR 110 PERCENT OF THE INVOICE VALUE AND EVIDENCING THAT INSURANCE
+     COVER IS EFFECTIVE FROM A DATE NOT LATER THAN THE DATE OF SHIPMENT.
+  5. CERTIFICATE OF ORIGIN IN 1 COPY ISSUED BY THE KOREA CHAMBER OF
+     COMMERCE AND INDUSTRY.
+  ```
+  `contains "CERTIFICATE OF ORIGIN": true`. The parser reads the actual set C file, not set A's shorter list, so it is not hardcoded. This supersedes the earlier set B note per the corrected work order.

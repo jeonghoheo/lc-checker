@@ -25,7 +25,7 @@ Run detection automatically after upload, store the result in Document.docType, 
 Add unit tests with the five sample document texts from samples/set-a and samples/set-c (insurance), each expecting its type above.
 Run the tests and show me the results.
 
-## Block 3 — Extract values from the letter of credit
+## Block 3 — Extract values from the letter of credit (done)
 
 In apps/api, add an LC parser for documents whose docType is "LC":
 - Parse the MT700 text by its field tags and produce a structured object with: creditNumber (:20:), issueDate (:31C:), expiryDate and expiryPlace (:31D:), applicant (:50:), beneficiary (:59:), currency and amount (:32B:), tolerance (:39A:), portOfLoading (:44E:), portOfDischarge (:44F:), latestShipmentDate (:44C:), goodsDescription (:45A:), documentsRequired (:46A: as raw text), presentationDays (number parsed from :48:, e.g. 21).
@@ -34,5 +34,7 @@ In apps/api, add an LC parser for documents whose docType is "LC":
 - Add unit tests that parse samples/set-a/lc-mt700.txt and assert every field above against the known values.
 Run the tests and show me the results.
 
-## Block 3 extra check (hardcoding detection)
-After Block 3 tests pass, run the same parser once on samples/set-b/lc-mt700.txt and record the extracted values in the log. Set B's LC has slightly different values, so if Set A's values come out, the parser is hardcoded.
+## Block 3 extra check (hardcoding detection) — corrected
+Note: samples/set-a and samples/set-b have the SAME lc-mt700.txt by design (the LC is the reference; the planted errors live in the shipping documents), so set B cannot detect hardcoding.
+Instead: run the parser once on samples/set-c/lc-mt700.txt. Its :46A: lists two extra required documents (an insurance certificate and a certificate of origin) that set A does not have. Record the extracted documentsRequired in the log. If it contains "CERTIFICATE OF ORIGIN", the parser reads the actual file. If it returns only set A's shorter list, the parser is hardcoded.
+Append the result to SESSION-LOG.md under the Block 3 entry as an extra-check note, then commit and push.

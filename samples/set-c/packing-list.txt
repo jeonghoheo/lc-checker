@@ -1,0 +1,39 @@
+HANBYEOL PACKAGING CO., LTD.
+123 Packaging-ro, Asan-si, Chungcheongnam-do, Republic of Korea
+
+PACKING LIST
+
+Packing List No.: HB-PL-2026-041
+Date: 24 November 2026
+Invoice No.: HB-INV-2026-041
+L/C No.: HNBC-260781-KR
+
+Shipper: Hanbyeol Packaging Co., Ltd.
+         123 Packaging-ro, Asan-si, Chungcheongnam-do, Republic of Korea
+Consignee: Nordlys Cosmetics GmbH
+           Speicherstadt 12, 20457 Hamburg, Germany
+
+Shipment: From Busan Port, Republic of Korea to Hamburg Port, Germany
+Vessel: MV NORTHERN EXPRESS V.064N
+
+Description of Goods: COSMETIC CONTAINERS (PLASTIC)
+
+----------------------------------------------------------------------------------------
+Item  Item Code     Quantity     Cartons   Net Weight    Gross Weight
+----------------------------------------------------------------------------------------
+1     HB-JAR-50     5,800 PCS    300 CTNS   640.00 KGS    740.00 KGS
+2     HB-PUMP-30    3,800 PCS    200 CTNS   460.00 KGS    510.00 KGS
+----------------------------------------------------------------------------------------
+TOTAL               9,600 PCS    500 CTNS   1,100.00 KGS  1,250.00 KGS
+----------------------------------------------------------------------------------------
+
+Total Number of Cartons: 500 (FIVE HUNDRED) CARTONS
+Total Gross Weight: 1,250.00 KGS
+Total Net Weight: 1,100.00 KGS
+Total Measurement: 21.450 CBM
+
+Container No.: MSKU 731204-8
+Seal No.: ML-KR 004417
+
+Hanbyeol Packaging Co., Ltd.
+(Authorized signature)
