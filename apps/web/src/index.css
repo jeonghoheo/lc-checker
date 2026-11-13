@@ -237,3 +237,15 @@ section + section {
     grid-template-columns: 1fr;
   }
 }
+
+.language-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.language-switcher button.active {
+  font-weight: 700;
+  outline: 2px solid currentColor;
+}

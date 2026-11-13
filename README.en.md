@@ -124,5 +124,5 @@ The checking engine was verified with the three sets in the `samples/` folder.
 - **Rule 15 (endorsement) is not checked in this version.**
 - **A certificate of origin cannot be uploaded in this version.** If the LC requires one, rule 13 reports it as a missing document.
 - **Extraction quality is validated with DeepSeek only; other models are untested.**
-- **The UI is Korean only.** An English UI is planned for v2.
+- **The UI is available in Korean, English, and Russian.** Server-stored result messages and skip reasons are not translated yet, and the downloadable report remains Korean.
 - **This tool is a pre-check.** The bank performs the final document examination and payment decision. The last line of the report carries the same notice.

@@ -15,6 +15,7 @@
 - v1.0.0 complete and tagged (2026-11-13): extraction, 15-rule engine (scoring 12/12), AI second opinion, web flow, report download, README.
 - v1.0.1 (Block 14): provider-neutral LLM config (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL with DEEPSEEK_* fallback), .env.example with DeepSeek/OpenAI/OpenRouter/LiteLLM examples, README provider-neutral wording.
 - Block 15 — English and Russian README versions (done 2026-11-13)
+- Block 16 — UI in Korean, English, and Russian (done 2026-11-13); v1.1.0
 
 ## Block 15 — English and Russian README versions (done)
 
@@ -25,7 +26,7 @@ Documentation only in this block (UI languages come in Block 16).
 - Add a language line at the very top of all three files: `한국어 | [English](README.en.md) | [Русский](README.ru.md)` — in README.en.md link back to README.md as 한국어, and likewise in README.ru.md.
 - No code changes in this block. Verify the three files render (headings/tables intact) and commit + push together.
 
-## Block 16 — UI in Korean, English, and Russian (owner reversed the v1 Korean-only decision)
+## Block 16 — UI in Korean, English, and Russian (owner reversed the v1 Korean-only decision) (done)
 
 In apps/web:
 - Add a small dictionary file (e.g. src/i18n.ts) with `ko`, `en`, `ru` string tables and a language state (default Korean), persisted in localStorage. No i18n library.

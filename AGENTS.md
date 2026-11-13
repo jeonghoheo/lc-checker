@@ -44,6 +44,14 @@ plus a fee, so catching errors early is the whole point.
 - Session 7 done: README rewritten, full clean-state verification passed,
   and v1 is tagged `v1.0.0`. Manual set A browser run ended with
   13 pass / 0 fail / 2 skipped.
+- Block 14 / v1.0.1 done: LLM config is provider-neutral
+  (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, with `DEEPSEEK_*`
+  fallback).
+- Block 16 / v1.1.0 done: the web UI supports Korean, English, and
+  Russian with a persisted language switcher. Rule names, AI verdict
+  labels, and UI chrome are translated. API result messages and skip
+  reasons are not translated (currently stored in English), and the
+  downloadable report remains Korean.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -66,9 +74,10 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.
 - `PATCH /document-sets/:id/presentation-date` sets the presentation
   date; `POST /document-sets/:id/check` stores and returns a check run.
-- apps/web: one Korean page for the full flow — create a set, upload
-  files, inspect extracted values, set the presentation date, run the
-  check, and review FAIL/SKIPPED/PASS results with AI advisory notes.
+- apps/web: one page with Korean/English/Russian UI for the full flow
+  — create a set, upload files, inspect extracted values, set the
+  presentation date, run the check, and review FAIL/SKIPPED/PASS
+  results with AI advisory notes.
 
 ## Frozen scope (v1)
 - Text-layer PDF and text files only. NO OCR (real scans are v2).
@@ -102,9 +111,9 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-v1 is complete and tagged `v1.0.0`. Possible v2 work (not started):
-OCR for scanned documents, ISBP coverage, an English UI, and support
-for uploading a certificate of origin.
+v1.1.0 is complete. Possible v2 work (not started): OCR for scanned
+documents, ISBP coverage, translating API result messages and the
+report, and support for uploading a certificate of origin.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews
