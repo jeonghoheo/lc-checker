@@ -6,11 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { ChecksService } from '../checks/checks.service.js';
+import { ReportService } from '../checks/report.service.js';
 import { DocumentSetsService } from './document-sets.service.js';
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'text/plain'];
@@ -21,6 +24,7 @@ export class DocumentSetsController {
   constructor(
     private readonly documentSetsService: DocumentSetsService,
     private readonly checksService: ChecksService,
+    private readonly reportService: ReportService,
   ) {}
 
   @Post()
@@ -74,6 +78,20 @@ export class DocumentSetsController {
   @Post(':id/check')
   runCheck(@Param('id') id: string) {
     return this.checksService.runCheck(id);
+  }
+
+  @Get(':id/report')
+  async getReport(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const report = await this.reportService.generate(id);
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${report.filename}"`,
+    );
+    return report.html;
   }
 
   @Get(':id/documents/:docId/text')

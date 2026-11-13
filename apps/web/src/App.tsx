@@ -572,6 +572,43 @@ function App() {
     }
   }
 
+  async function downloadReport() {
+    if (!setId) {
+      setError('먼저 새 세트를 만들어 주세요.')
+      return
+    }
+
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/document-sets/${setId}/report`,
+      )
+      if (!response.ok) {
+        throw new Error(await readError(response))
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const disposition = response.headers.get('content-disposition')
+      const filenameMatch = disposition?.match(/filename="?([^";]+)"?/)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filenameMatch?.[1] ?? `lc-report-${setId}.html`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      setMessage('보고서를 내려받았습니다.')
+    } catch {
+      setError('보고서를 받지 못했습니다. 검사를 먼저 실행해 주세요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function toggleDocument(id: string) {
     setExpandedDocIds((current) =>
       current.includes(id)
@@ -690,13 +727,22 @@ function App() {
 
       <section>
         <h2>검사 실행</h2>
-        <button
-          type="button"
-          onClick={runCheck}
-          disabled={!setId || busy}
-        >
-          검사 실행
-        </button>
+        <div className="actions">
+          <button
+            type="button"
+            onClick={runCheck}
+            disabled={!setId || busy}
+          >
+            검사 실행
+          </button>
+          <button
+            type="button"
+            onClick={downloadReport}
+            disabled={!setId || !checkRun || busy}
+          >
+            보고서 받기
+          </button>
+        </div>
         {checkRun && (
           <>
             <p className="check-summary">

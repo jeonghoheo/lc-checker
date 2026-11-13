@@ -256,8 +256,11 @@ describe('Scoring run (e2e)', () => {
       .expect(201);
 
     expect(check.body.results).toHaveLength(15);
-    return check.body as {
-      results: Array<{ ruleNo: number; status: string }>;
+    return {
+      setId,
+      run: check.body as {
+        results: Array<{ ruleNo: number; status: string }>;
+      },
     };
   }
 
@@ -269,20 +272,39 @@ describe('Scoring run (e2e)', () => {
   }
 
   it('set A is clean: no FAIL results', async () => {
-    const run = await runScoringSet('2026-12-10', setA);
+    const { run } = await runScoringSet('2026-12-10', setA);
 
     expect(failedRules(run)).toEqual([]);
   });
 
   it('set B fails exactly rules 1, 2, 6, 8, 9, and 12', async () => {
-    const run = await runScoringSet('2026-12-25', setB);
+    const { run } = await runScoringSet('2026-12-25', setB);
 
     expect(failedRules(run)).toEqual([1, 2, 6, 8, 9, 12]);
   });
 
   it('set C fails exactly rules 4, 5, 7, 10, 13, and 14', async () => {
-    const run = await runScoringSet('2026-12-10', setC);
+    const { run } = await runScoringSet('2026-12-10', setC);
 
     expect(failedRules(run)).toEqual([4, 5, 7, 10, 13, 14]);
+  });
+
+  it('downloads a report with the rule 1 values and honesty notice', async () => {
+    const { setId } = await runScoringSet('2026-12-25', setB);
+
+    const response = await request(app.getHttpServer())
+      .get(`/document-sets/${setId}/report`)
+      .expect(200);
+
+    expect(response.headers['content-disposition']).toContain(
+      `attachment; filename="lc-report-${setId}.html"`,
+    );
+    expect(response.text).toContain('신용장 서류 미리 점검 보고서');
+    expect(response.text).toContain('선적 마감일');
+    expect(response.text).toContain('2026-11-30');
+    expect(response.text).toContain('2026-12-02');
+    expect(response.text).toContain(
+      '이 보고서는 은행에 서류를 내기 전에 미리 점검한 결과입니다. 은행의 최종 판정을 보장하지 않습니다.',
+    );
   });
 });

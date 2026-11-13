@@ -170,3 +170,8 @@
 - Tests: `npm run build` passed in `apps/web`; `npm run lint` passed.
 - Manual run: the same set B flow showed "검사 완료 — 통과 7개 · 불일치 6개 · 검사 못함 2개". The page showed 6 FAIL rows first in rule order 1, 2, 6, 8, 9, 12 with both values visible, then 2 SKIPPED rows. Rule 9 showed the AI note: "AI 참고 의견: 실제로 다름 — The invoice omits the LC word \"AIRLESS\" from the pump bottles description, so the goods description does not correspond to the LC." Expanding the PASS toggle showed 7 passing checks.
 - Notes: No failures. Session 6 is complete.
+
+## Block 12 — Downloadable discrepancy report (2026-11-13)
+- Done: Added `ReportService` and `GET /document-sets/:id/report`, returning the latest check run as a self-contained printable Korean HTML attachment named `lc-report-<setId>.html`. If no check run exists, it returns 400 with a plain message. The report includes the LC number, presentation date, summary counts, FAIL rows with both compared values and messages plus AI notes, SKIPPED reasons, PASS rule names, and the exact honesty notice as the last line. Added a "보고서 받기" button next to "검사 실행" in the web page, disabled until a check has run.
+- Tests: passed 47 / total 47 (vitest unit), passed 10 / total 10 (e2e). `npm run build` and `npm run lint` passed in `apps/web`. The new e2e test reuses the set B fixtures and asserts the rule 1 values and honesty notice in the downloaded HTML.
+- Notes: No failures.

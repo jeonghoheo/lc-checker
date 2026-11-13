@@ -1,4 +1,4 @@
-# SESSION.md — Session 6 work orders (written by the reviewer, executed by OpenCode)
+# SESSION.md — Session 7 work orders (final session of v1)
 
 ## Working rules (fixed)
 - When the owner says "Run Block N", execute only Block N below. One block at a time.
@@ -13,32 +13,22 @@
 - At the end of the last block of a session, also update the Current status section of AGENTS.md and push it together.
 
 ## Done so far
-- Sessions 3-4 complete: extraction (5 document types) and the 15-rule engine. Scoring: planted errors 12 / 12, zero false positives.
-- Session 5 complete: AI second opinion (aiReview) stored on FAIL results of rules 9, 11, 12. Live spot checks: set B rule 9 -> "discrepancy"; one-letter company-name typo -> "likely_typo".
-- Block 10 — full web flow (done 2026-11-13)
-- Block 11 — results view (done 2026-11-13); session 6 complete.
+- Sessions 3-5 complete: extraction (5 types), 15-rule engine (scoring 12/12, zero false positives), AI second opinion on rules 9/11/12.
+- Session 6 complete: full web flow — upload, extracted values, presentation date, check run, results view (FAIL first, both values side by side, AI note shown). Manual set B run on the page matched the expected counts and rows.
+- Block 12 — downloadable discrepancy report (done 2026-11-13)
 
-## Design rules for all screens (owner's standing rules)
-- Korean UI. Plain, short sentences. No abbreviation without spelling it out once.
-- Buttons say the action as a verb ("검사 실행", "보고서 받기").
-- Progress and results use concrete numbers ("불일치 6개" not "몇 개 문제").
-- Keep it one simple page flow; no new libraries for styling — plain CSS in the existing style file.
+## Block 12 — Downloadable discrepancy report (done)
 
-## Block 10 — Wire the full flow into the web page (done)
+In apps/api + apps/web:
+- Add `GET /document-sets/:id/report` that returns the latest check run of the set as one self-contained HTML file download (Content-Disposition attachment, filename like `lc-report-<setId>.html`). If the set has no check run yet, return 400 with a plain message.
+- Report content (Korean, printable from a browser): title "신용장 서류 미리 점검 보고서", the LC number and presentation date, the summary counts (통과/불일치/검사 못함), then a table of FAIL rows (rule name in Korean — same mapping as the web results view, both compared values, message, AI note when present), SKIPPED rows with reasons, and PASS rule names in one line each.
+- The last line of the report must be this honesty notice, exactly: "이 보고서는 은행에 서류를 내기 전에 미리 점검한 결과입니다. 은행의 최종 판정을 보장하지 않습니다."
+- In apps/web, add a "보고서 받기" button next to "검사 실행" that downloads the report for the current set (disabled until a check has run).
+- Tests: one e2e test that seeds a set with a known FAIL (reuse the set B fixtures), runs the check, downloads the report, and asserts the HTML contains the rule 1 FAIL values and the honesty notice. `npm run build` in apps/web must pass.
 
-In apps/web, extend the existing upload page into the full flow on one page, in this order:
-1. 서류 올리기 (existing upload, keep as is).
-2. 올린 서류 목록: each document shows its detected type in Korean (신용장 / 상업송장 / 포장명세서 / 선하증권 / 보험증서 / 종류 미확인) and a "뽑은 값 보기" toggle that renders its extractedData as simple key-value rows.
-3. 제시일 입력: a date input labeled "은행에 서류를 내는 날짜" with one helper line: "이 날짜가 있어야 제시 기한 검사가 돌아갑니다." Save via the presentation-date endpoint.
-4. "검사 실행" button that calls POST /document-sets/:id/check and then shows the result summary line: "검사 완료 — 통과 X개 · 불일치 Y개 · 검사 못함 Z개" (counts from the returned results).
-- Handle errors plainly: if the API call fails, show "검사에 실패했습니다. 서버가 켜져 있는지 확인해 주세요." style messages, never raw error JSON.
-- Verify: `npm run build` in apps/web passes, and record a manual run in the log (upload the four set B files through the page, set presentation date 2026-12-25, run the check, and write down the summary counts the page showed — expected: 통과 7 · 불일치 6 · 검사 못함 2).
+## Block 13 — README and v1 wrap-up (final block)
 
-## Block 11 — Results view (what does not match, first) (done)
-
-Below the summary line from Block 10, render the check results:
-- Order: 불일치(FAIL) first, then 검사 못함(SKIPPED), then 통과(PASS) as a collapsed list (a "통과한 검사 보기" toggle).
-- Each FAIL row shows: the rule's plain Korean name (mapping below), the two compared values side by side with labels (left: "신용장·기준 값", right: "서류 값" — use the labels stored in the result detail when present), the result message in one short line, and, when detail.aiReview exists, a small note box: "AI 참고 의견: " + verdict in Korean (corresponds -> "같은 물품으로 보임", discrepancy -> "실제로 다름", likely_typo -> "오타로 보임", different -> "다른 회사로 보임", unsure -> "판단 보류") + the reason sentence.
-- Each SKIPPED row shows the rule name and the skip reason in plain words.
-- Rule name mapping (Korean): 1 선적 마감일, 2 제시 기한 (21일), 3 신용장 만료일, 4 보험 날짜, 5 송장 금액 한도, 6 총중량 일치, 7 수량 일치, 8 상자 수 일치, 9 물품 설명 대응, 10 항구 일치, 11 수하인 일치, 12 통지처 일치, 13 요구 서류 구비, 14 본선적재 표기, 15 배서 (이번 버전 검사 제외).
-- Verify: `npm run build` passes, plus the same manual set B run as Block 10 — record in the log that the 6 FAIL rows appear first with both values shown, and that the rule 9 row shows the AI note.
+- Rewrite the repository README.md (Korean main text, short English summary at the top): what the tool does in 3 plain steps (서류 올리기 -> 값 뽑기 -> 규칙 대조), a screenshot placeholder section (leave the headings, no fake images), how to run locally (docker compose, api, web, .env with DEEPSEEK_API_KEY), the 15 rules table with their UCP 600 basis, the scoring result (sample sets A/B/C, planted errors 12/12, traps with zero false positives), and an honest limits section listing: text-layer PDF/text files only (no OCR for scanned documents), the 15 rules are a subset of UCP 600 practice (ISBP not included), rule 15 (endorsement) is not checked in v1, a certificate of origin cannot be uploaded in v1, Korean UI only (English UI planned for v2), and the tool is a pre-check that does not guarantee a bank's decision.
+- Full local verification, recorded in the log: from a clean state, `docker compose up -d`, start api and web, run the whole test suites (api unit + e2e, web build + lint), then one manual browser flow with set A files ending in "불일치 0개".
+- Create git tag `v1.0.0` on the final commit and push the tag.
+- Update AGENTS.md Current status: v1 complete. Push everything together.
