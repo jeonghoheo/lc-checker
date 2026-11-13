@@ -41,6 +41,9 @@ plus a fee, so catching errors early is the whole point.
   summary) and shows results with FAIL rows first, compared values,
   SKIPPED reasons, a collapsed PASS list, and AI advisory notes.
   Manual set B run showed 7 pass / 6 fail / 2 skipped.
+- Session 7 done: README rewritten, full clean-state verification passed,
+  and v1 is tagged `v1.0.0`. Manual set A browser run ended with
+  13 pass / 0 fail / 2 skipped.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -99,9 +102,9 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-The extraction, rule engine, AI advisory, and web review flow are all
-done. No next block is defined yet. The upload -> check -> results flow
-is complete in the web UI.
+v1 is complete and tagged `v1.0.0`. Possible v2 work (not started):
+OCR for scanned documents, ISBP coverage, an English UI, and support
+for uploading a certificate of origin.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews

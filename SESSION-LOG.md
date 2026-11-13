@@ -175,3 +175,9 @@
 - Done: Added `ReportService` and `GET /document-sets/:id/report`, returning the latest check run as a self-contained printable Korean HTML attachment named `lc-report-<setId>.html`. If no check run exists, it returns 400 with a plain message. The report includes the LC number, presentation date, summary counts, FAIL rows with both compared values and messages plus AI notes, SKIPPED reasons, PASS rule names, and the exact honesty notice as the last line. Added a "보고서 받기" button next to "검사 실행" in the web page, disabled until a check has run.
 - Tests: passed 47 / total 47 (vitest unit), passed 10 / total 10 (e2e). `npm run build` and `npm run lint` passed in `apps/web`. The new e2e test reuses the set B fixtures and asserts the rule 1 values and honesty notice in the downloaded HTML.
 - Notes: No failures.
+
+## Block 13 — README and v1 wrap-up (final block) (2026-11-13)
+- Done: Rewrote `README.md` with a short English summary, Korean 3-step explanation (서류 올리기 -> 값 뽑기 -> 규칙 대조), screenshot placeholders, local run instructions including `apps/api/.env` with `DEEPSEEK_API_KEY`, the 15-rule table with UCP 600 references, the A/B/C sample score, and the honest limits section. Updated the web build after the final UI work.
+- Tests: passed 47 / total 47 (vitest unit), passed 10 / total 10 (e2e), `npm run build` and `npm run lint` passed in `apps/web`.
+- Full local verification: stopped the API/web processes, ran `docker compose down` then `docker compose up -d`, started the API and web app, ran all suites above, then ran one manual browser flow with the four set A files and presentation date `2026-12-10`. The page ended with "검사 완료 — 통과 13개 · 불일치 0개 · 검사 못함 2개" and 0 FAIL rows. The report button also downloaded `lc-report-<setId>.html`.
+- Notes: v1 is complete. Git tag `v1.0.0` is created on the final commit. No failures.
