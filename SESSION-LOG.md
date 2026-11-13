@@ -136,3 +136,17 @@
 - Done: Implemented rule 4 (insurance issue date with B/L issue-date fallback) and rules 9-15: deterministic goods-word check, port checks, consignee/notify name comparison, required-document presence, on-board notation, and the v1 endorsement skip. Added `uploadedDocTypes` to the check context so rule 13 uses actual uploaded document types.
 - Tests: passed 44 / total 44 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors. Each implemented rule has pass and fail unit cases from the sample values.
 - Notes: Rule 9 checks significant product words before any "AS PER" or "TRADE TERMS" boilerplate and ignores numeric-only tokens, preventing false failures from proforma/trade-term text. No failures.
+
+## Block 8 — Scoring run against the planted errors (session 4 finale) (2026-11-13)
+- Done: Added `test/scoring.e2e-spec.ts`. It builds sets A, B, and C from fixture `extractedData` (the LC fixtures come from the sample LC files; the other values match the sample documents) and runs `POST /document-sets/:id/check`. The test does not call the live AI API.
+- Tests: passed 44 / total 44 (vitest unit), passed 9 / total 9 (e2e). Lint has no errors.
+- Scorecard:
+
+  | Set | Expected FAIL rules | Actual FAIL rules | Planted errors caught |
+  | --- | --- | --- | --- |
+  | A | none | none | 0 / 0 |
+  | B | 1, 2, 6, 8, 9, 12 | 1, 2, 6, 8, 9, 12 | 6 / 6 |
+  | C | 4, 5, 7, 10, 13, 14 | 4, 5, 7, 10, 13, 14 | 6 / 6 |
+
+  Planted errors caught: 12 / 12.
+- Notes: The trap items produced no extra FAIL results (set B's reordered shipper address and set C's general-terms packing description). Session 4 is complete.

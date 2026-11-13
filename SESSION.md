@@ -16,6 +16,7 @@
 - Session 3 complete (2026-11-13): text extraction, document type detection, LC parser (hardcoding check passed on set C), AI extraction for invoice / packing list / bill of lading / insurance — live DeepSeek runs verified against known sample values.
 - Block 6 — check plumbing + rules 1-8 (done 2026-11-13)
 - Block 7 — rules 9-15 (done 2026-11-13)
+- Block 8 — scoring run against planted errors (done 2026-11-13); session 4 complete with 12 / 12 planted errors caught.
 
 ## Shared definitions for Session 4 (all blocks)
 - A check runs over one DocumentSet. Inputs are the documents' extractedData plus the set's presentationDate.
@@ -58,7 +59,7 @@ Implement the remaining rules as pure functions over extractedData:
 - Unit tests: one pass and one fail case per rule from sample values (rule 9 fails when "AIRLESS" is missing from invoice items; rule 12 fails for notify "NORDLYS LOGISTICS GMBH"; rule 13 fails when the LC requires a certificate of origin that is not uploaded; rule 14 fails when shippedOnBoardDate is null; rule 4 fails for insurance 2026-11-28 vs shipment 2026-11-25).
 Run the tests and show me the results.
 
-## Block 8 — Scoring run against the planted errors (session 4 finale)
+## Block 8 — Scoring run against the planted errors (session 4 finale) (done)
 
 Add an e2e scoring test that builds three document sets from fixture extractedData matching the samples exactly (do not call the live API in this test):
 - Set A fixtures (clean set), presentationDate 2026-12-10. Expect: 0 FAIL.

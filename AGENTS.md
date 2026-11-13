@@ -25,7 +25,12 @@ plus a fee, so catching errors early is the whole point.
   API (HB-INV-2026-041, USD 48,000, 10,000 units, 2 items).
 - Block 5 live extraction passed for packing list, bill of lading,
   and insurance. Their known sample values were stored correctly.
-- No rule engine yet.
+- Session 4 done: added `presentationDate`, CheckRun/CheckResult,
+  `PATCH /document-sets/:id/presentation-date`, and
+  `POST /document-sets/:id/check`, plus all 15 deterministic rules.
+- Session 4 scoring passed without live AI calls: set A has 0 FAIL,
+  set B fails exactly rules 1, 2, 6, 8, 9, 12, and set C fails
+  exactly rules 4, 5, 7, 10, 13, 14. Planted errors caught: 12/12.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -37,13 +42,18 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 `brew services start postgresql@18`. Prisma is pinned to 6.19.3.
 
 ## Architecture
-- apps/api: NestJS + Prisma. Tables: DocumentSet (one checking job),
-  Document (one uploaded file; docType is detected, extractedData
-  holds parsed LC values or AI-extracted document values).
+- apps/api: NestJS + Prisma. Tables: DocumentSet (one checking job,
+  optional presentationDate), Document (one uploaded file; docType is
+  detected, extractedData holds parsed LC values or AI-extracted
+  document values), CheckRun (one execution of the rule engine), and
+  CheckResult (one of the 15 rule results with status and detail JSON).
 - Uploaded files are stored on disk under `uploads/<setId>/` with
   unique names. The database stores only records (names, paths, sizes).
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.
+- `PATCH /document-sets/:id/presentation-date` sets the presentation
+  date; `POST /document-sets/:id/check` stores and returns a check run.
 - apps/web: one Korean page — create a set, upload files, see the list.
+  The check results are not shown in the UI yet.
 
 ## Frozen scope (v1)
 - Text-layer PDF and text files only. NO OCR (real scans are v2).
@@ -77,9 +87,9 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-Session 3 value extraction is done. Next is the deterministic rule
-engine: apply the 15 rules to the stored LC and document values.
-Not started yet.
+Session 3 value extraction and Session 4 rule engine are done. Next is
+showing check results in the web review screen and adding the result
+report UI. Not started yet.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews
