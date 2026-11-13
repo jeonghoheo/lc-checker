@@ -1,25 +1,62 @@
 import { INestApplication } from '@nestjs/common';
+import { jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
+import { AiExtractionService } from '../src/document-sets/ai-extraction.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+
+const invoiceFixture = {
+  invoiceNumber: 'HB-INV-2026-041',
+  invoiceDate: '2026-11-24',
+  sellerName: 'Hanbyeol Packaging Co., Ltd.',
+  buyerName: 'Nordlys Cosmetics GmbH',
+  lcNumber: 'HNBC-260781-KR',
+  currency: 'USD',
+  totalAmount: 48000,
+  totalQuantity: 10000,
+  items: [
+    {
+      description: 'Plastic cosmetic jars 50ml',
+      quantity: 6000,
+      unitPrice: 4.2,
+      amount: 25200,
+    },
+    {
+      description: 'Airless pump bottles 30ml',
+      quantity: 4000,
+      unitPrice: 5.7,
+      amount: 22800,
+    },
+  ],
+};
 
 describe('Document sets upload (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let aiExtract: ReturnType<typeof jest.fn>;
   const createdSetIds: string[] = [];
 
   beforeAll(async () => {
+    aiExtract = jest.fn().mockResolvedValue(invoiceFixture);
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(AiExtractionService)
+      .useValue({ extract: aiExtract })
+      .compile();
 
     app = moduleRef.createNestApplication();
     await app.init();
     prisma = app.get(PrismaService);
+  });
+
+  beforeEach(() => {
+    aiExtract.mockResolvedValue(invoiceFixture);
   });
 
   afterAll(async () => {
@@ -113,6 +150,68 @@ describe('Document sets upload (e2e)', () => {
 
     expect(response.body.text).toContain(':20: Documentary Credit Number');
     expect(response.body.text).toContain('HNBC-260781-KR');
+  });
+
+  it('stores the mocked AI invoice extraction on the document', async () => {
+    const setId = await createSet();
+    const samplePath = join(
+      process.cwd(),
+      '..',
+      '..',
+      'samples',
+      'set-a',
+      'commercial-invoice.txt',
+    );
+    const content = await readFile(samplePath);
+
+    const upload = await request(app.getHttpServer())
+      .post(`/document-sets/${setId}/documents`)
+      .attach('file', content, {
+        filename: 'commercial-invoice.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+
+    expect(upload.body.docType).toBe('INVOICE');
+
+    const read = await request(app.getHttpServer())
+      .get(`/document-sets/${setId}`)
+      .expect(200);
+
+    expect(read.body.documents[0]).toMatchObject({
+      id: upload.body.id,
+      docType: 'INVOICE',
+      extractedData: invoiceFixture,
+    });
+  });
+
+  it('keeps an invoice upload when AI extraction fails', async () => {
+    aiExtract.mockRejectedValueOnce(
+      new Error('DEEPSEEK_API_KEY is not set.'),
+    );
+    const setId = await createSet();
+    const samplePath = join(
+      process.cwd(),
+      '..',
+      '..',
+      'samples',
+      'set-a',
+      'commercial-invoice.txt',
+    );
+    const content = await readFile(samplePath);
+
+    const upload = await request(app.getHttpServer())
+      .post(`/document-sets/${setId}/documents`)
+      .attach('file', content, {
+        filename: 'commercial-invoice.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+
+    expect(upload.body).toMatchObject({
+      docType: 'INVOICE',
+      extractedData: null,
+    });
   });
 
   it('rejects a disallowed file type with 400', async () => {

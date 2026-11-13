@@ -35,3 +35,8 @@
      COMMERCE AND INDUSTRY.
   ```
   `contains "CERTIFICATE OF ORIGIN": true`. The parser reads the actual set C file, not set A's shorter list, so it is not hardcoded. This supersedes the earlier set B note per the corrected work order.
+
+## Block 4 — AI extraction base + commercial invoice (2026-11-13)
+- Done: Added `AiExtractionService` for DeepSeek's OpenAI-compatible JSON endpoint, `.env.example`, and `InvoiceExtractionService` with code-side validation. INVOICE documents are extracted automatically on upload; extraction or validation failures keep the upload with `extractedData = null`. Added mocked unit tests plus e2e tests for storing mocked invoice data and keeping an upload when extraction fails.
+- Tests: passed 9 / total 9 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors.
+- Notes: The required live DeepSeek run is blocked because `DEEPSEEK_API_KEY` is missing or empty in `apps/api/.env`. Stopped as required. Add `DEEPSEEK_API_KEY` (and optionally `DEEPSEEK_MODEL`) to `apps/api/.env` before the live run.

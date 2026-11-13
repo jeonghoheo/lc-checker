@@ -1,19 +1,28 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DocumentTextService } from './document-text.service.js';
 import { DocumentTypeService } from './document-type.service.js';
+import { InvoiceExtractionService } from './invoice-extraction.service.js';
 import { LcParserService } from './lc-parser.service.js';
 
 @Injectable()
 export class DocumentSetsService {
+  private readonly logger = new Logger(DocumentSetsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly documentTextService: DocumentTextService,
     private readonly documentTypeService: DocumentTypeService,
     private readonly lcParserService: LcParserService,
+    private readonly invoiceExtractionService: InvoiceExtractionService,
   ) {}
 
   createSet() {
@@ -56,19 +65,32 @@ export class DocumentSetsService {
     mimeType: string,
     storedPath: string,
   ) {
-    try {
-      const text = await this.documentTextService.extractText(
-        mimeType,
-        storedPath,
-      );
-      const docType = this.documentTypeService.detect(text);
-      const extractedData =
-        docType === 'LC' ? this.lcParserService.parse(text) : null;
+    let text: string;
 
-      return { docType, extractedData };
+    try {
+      text = await this.documentTextService.extractText(mimeType, storedPath);
     } catch {
       return { docType: null, extractedData: null };
     }
+
+    const docType = this.documentTypeService.detect(text);
+
+    try {
+      if (docType === 'LC') {
+        return { docType, extractedData: this.lcParserService.parse(text) };
+      }
+
+      if (docType === 'INVOICE') {
+        const extractedData = await this.invoiceExtractionService.extract(text);
+        return { docType, extractedData };
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Could not extract data from ${docType} document: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
+
+    return { docType, extractedData: null };
   }
 
   async addDocument(setId: string, file: Express.Multer.File) {
