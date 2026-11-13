@@ -8,10 +8,13 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BillOfLadingExtractionService } from './bill-of-lading-extraction.service.js';
 import { DocumentTextService } from './document-text.service.js';
 import { DocumentTypeService } from './document-type.service.js';
+import { InsuranceExtractionService } from './insurance-extraction.service.js';
 import { InvoiceExtractionService } from './invoice-extraction.service.js';
 import { LcParserService } from './lc-parser.service.js';
+import { PackingListExtractionService } from './packing-list-extraction.service.js';
 
 @Injectable()
 export class DocumentSetsService {
@@ -23,6 +26,9 @@ export class DocumentSetsService {
     private readonly documentTypeService: DocumentTypeService,
     private readonly lcParserService: LcParserService,
     private readonly invoiceExtractionService: InvoiceExtractionService,
+    private readonly packingListExtractionService: PackingListExtractionService,
+    private readonly billOfLadingExtractionService: BillOfLadingExtractionService,
+    private readonly insuranceExtractionService: InsuranceExtractionService,
   ) {}
 
   createSet() {
@@ -82,6 +88,24 @@ export class DocumentSetsService {
 
       if (docType === 'INVOICE') {
         const extractedData = await this.invoiceExtractionService.extract(text);
+        return { docType, extractedData };
+      }
+
+      if (docType === 'PACKING_LIST') {
+        const extractedData =
+          await this.packingListExtractionService.extract(text);
+        return { docType, extractedData };
+      }
+
+      if (docType === 'BILL_OF_LADING') {
+        const extractedData =
+          await this.billOfLadingExtractionService.extract(text);
+        return { docType, extractedData };
+      }
+
+      if (docType === 'INSURANCE') {
+        const extractedData =
+          await this.insuranceExtractionService.extract(text);
         return { docType, extractedData };
       }
     } catch (error) {

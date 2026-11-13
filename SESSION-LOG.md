@@ -68,3 +68,61 @@
   }
   ```
   Validation passed and the values match the sample invoice. This supersedes the blocked note above.
+
+## Block 5 — Packing list, bill of lading, insurance extraction (2026-11-13)
+- Done: Added `PackingListExtractionService`, `BillOfLadingExtractionService`, and `InsuranceExtractionService` using the Block 4 AI pattern plus shared code-side validation. Each type is extracted automatically on upload and stored in `Document.extractedData`. Unit tests use mocked AI fixtures for the set A packing list, set A bill of lading, and set C insurance certificate.
+- Tests: passed 13 / total 13 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors.
+- Notes: One live DeepSeek run per document type succeeded on the samples. The extracted values were:
+  ```json
+  {
+    "docType": "PACKING_LIST",
+    "extractedData": {
+      "packingListNumber": "HB-PL-2026-041",
+      "date": "2026-11-24",
+      "invoiceNumber": "HB-INV-2026-041",
+      "lcNumber": "HNBC-260781-KR",
+      "totalQuantity": 10000,
+      "totalCartons": 500,
+      "totalNetWeightKg": 1100,
+      "totalGrossWeightKg": 1250,
+      "vessel": "MV NORTHERN EXPRESS V.064N"
+    }
+  }
+  ```
+  ```json
+  {
+    "docType": "BILL_OF_LADING",
+    "extractedData": {
+      "blNumber": "HB-BL-2026-041",
+      "shipper": "HANBYEOL PACKAGING CO., LTD., 123 PACKAGING-RO, ASAN-SI, CHUNGCHEONGNAM-DO, REPUBLIC OF KOREA",
+      "consignee": "NORDLYS COSMETICS GMBH, SPEICHERSTADT 12, 20457 HAMBURG, GERMANY",
+      "notifyParty": "NORDLYS COSMETICS GMBH, SPEICHERSTADT 12, 20457 HAMBURG, GERMANY",
+      "vessel": "MV NORTHERN EXPRESS",
+      "voyage": "V.064N",
+      "portOfLoading": "BUSAN PORT, REPUBLIC OF KOREA",
+      "portOfDischarge": "HAMBURG PORT, GERMANY",
+      "shippedOnBoardDate": "2026-11-25",
+      "totalCartons": 500,
+      "totalGrossWeightKg": 1250,
+      "goodsDescription": "PLASTIC COSMETIC JARS 50ML AND AIRLESS PUMP BOTTLES 30ML",
+      "freightPrepaid": true,
+      "cleanOnBoard": false
+    }
+  }
+  ```
+  ```json
+  {
+    "docType": "INSURANCE",
+    "extractedData": {
+      "certificateNumber": "MI-CERT-2026-1187",
+      "policyNumber": "MI-POL-2026-0092",
+      "issueDate": "2026-11-28",
+      "assured": "Hanbyeol Packaging Co., Ltd.",
+      "currency": "USD",
+      "sumInsured": 53350,
+      "voyageFrom": "Busan Port, Republic of Korea",
+      "voyageTo": "Hamburg Port, Germany"
+    }
+  }
+  ```
+  These match the known sample values: packing 500 cartons / gross 1250 / net 1100, B/L shipped on board 2026-11-25 / 500 cartons / gross 1250 / freight prepaid true, and insurance certificate MI-CERT-2026-1187 / issue date 2026-11-28 / sum insured USD 53,350.

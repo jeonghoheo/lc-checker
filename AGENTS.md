@@ -12,17 +12,19 @@ plus a fee, so catching errors early is the whole point.
 - Session 1 done: concept and the 15 checking rules are fixed (below).
 - Session 2 done: skeleton + file upload + passing e2e tests,
   pushed to GitHub (public, jeonghoheo/lc-checker).
-- Session 3 blocks 1-4 done: text extraction for text/PDF,
+- Session 3 done, blocks 1-5: text extraction for text/PDF,
   document-type detection on upload, an MT700 LC parser, and
-  DeepSeek AI extraction for commercial invoices with code-side
-  validation. Extracted values are stored in Document.extractedData
-  (JSONB); GET document-set returns both docType and extractedData.
+  DeepSeek AI extraction for invoices, packing lists, bills of
+  lading, and insurance with code-side validation. Extracted values
+  are stored in Document.extractedData (JSONB); GET document-set
+  returns both docType and extractedData.
 - Block 3 extra check passed on samples/set-c/lc-mt700.txt: the
   parsed documentsRequired includes CERTIFICATE OF ORIGIN, so the
   parser reads the actual file rather than hardcoded set A values.
 - Block 4 live invoice extraction passed against the real DeepSeek
   API (HB-INV-2026-041, USD 48,000, 10,000 units, 2 items).
-- Block 5 (packing list, bill of lading, insurance) is still pending.
+- Block 5 live extraction passed for packing list, bill of lading,
+  and insurance. Their known sample values were stored correctly.
 - No rule engine yet.
 
 ## How to run
@@ -37,7 +39,7 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 ## Architecture
 - apps/api: NestJS + Prisma. Tables: DocumentSet (one checking job),
   Document (one uploaded file; docType is detected, extractedData
-  holds parsed LC values).
+  holds parsed LC values or AI-extracted document values).
 - Uploaded files are stored on disk under `uploads/<setId>/` with
   unique names. The database stores only records (names, paths, sizes).
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.
@@ -75,10 +77,9 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-Session 3: value extraction. Read each uploaded document's text,
-identify its type, and pull the fields the 15 rules need into a
-structured, stored form. This is the hardest part of the project;
-take it document type by document type, starting with the LC (MT700).
+Session 3 value extraction is done. Next is the deterministic rule
+engine: apply the 15 rules to the stored LC and document values.
+Not started yet.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews

@@ -16,8 +16,10 @@
 - Block 1 — text extraction (done 2026-11-13)
 - Block 2 — document type detection (done 2026-11-13)
 - Block 3 — LC parser + hardcoding extra check on set C (done 2026-11-13)
+- Block 4 — AI extraction base + commercial invoice (done 2026-11-13)
+- Block 5 — packing list, bill of lading, insurance extraction (done 2026-11-13)
 
-## Block 4 — AI extraction base + commercial invoice
+## Block 4 — AI extraction base + commercial invoice (done)
 
 The remaining documents have no fixed tag format, so extraction uses the DeepSeek API (OpenAI-compatible chat endpoint) with a strict JSON schema, and plain code validates the result before storing.
 
@@ -31,7 +33,7 @@ In apps/api:
 - Then do ONE live run against the real API on the set A invoice and record the extracted values in the log. If the API key is not set, stop and ask the owner to add DEEPSEEK_API_KEY to apps/api/.env first.
 Run the tests and show me the results.
 
-## Block 5 — Packing list, bill of lading, insurance extraction
+## Block 5 — Packing list, bill of lading, insurance extraction (done)
 
 Using the Block 4 AiExtractionService pattern, add extractors for the remaining types, each stored into Document.extractedData on upload:
 - PACKING_LIST: packingListNumber, date (ISO), invoiceNumber, lcNumber, totalQuantity (number), totalCartons (number), totalNetWeightKg (number), totalGrossWeightKg (number), vessel.
