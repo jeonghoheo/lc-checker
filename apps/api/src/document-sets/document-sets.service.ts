@@ -5,6 +5,7 @@ import { extname, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DocumentTextService } from './document-text.service.js';
 import { DocumentTypeService } from './document-type.service.js';
+import { LcParserService } from './lc-parser.service.js';
 
 @Injectable()
 export class DocumentSetsService {
@@ -12,6 +13,7 @@ export class DocumentSetsService {
     private readonly prisma: PrismaService,
     private readonly documentTextService: DocumentTextService,
     private readonly documentTypeService: DocumentTypeService,
+    private readonly lcParserService: LcParserService,
   ) {}
 
   createSet() {
@@ -50,15 +52,22 @@ export class DocumentSetsService {
     };
   }
 
-  private async detectDocType(mimeType: string, storedPath: string) {
+  private async extractDocumentData(
+    mimeType: string,
+    storedPath: string,
+  ) {
     try {
       const text = await this.documentTextService.extractText(
         mimeType,
         storedPath,
       );
-      return this.documentTypeService.detect(text);
+      const docType = this.documentTypeService.detect(text);
+      const extractedData =
+        docType === 'LC' ? this.lcParserService.parse(text) : null;
+
+      return { docType, extractedData };
     } catch {
-      return null;
+      return { docType: null, extractedData: null };
     }
   }
 
@@ -80,7 +89,10 @@ export class DocumentSetsService {
     await mkdir(directory, { recursive: true });
     await writeFile(absolutePath, file.buffer);
 
-    const docType = await this.detectDocType(file.mimetype, storedPath);
+    const { docType, extractedData } = await this.extractDocumentData(
+      file.mimetype,
+      storedPath,
+    );
 
     try {
       return await this.prisma.document.create({
@@ -91,6 +103,7 @@ export class DocumentSetsService {
           mimeType: file.mimetype,
           sizeBytes: file.size,
           docType,
+          ...(extractedData ? { extractedData } : {}),
         },
       });
     } catch (error) {

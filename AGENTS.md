@@ -8,11 +8,17 @@ BEFORE the documents are presented to the bank. Banks deal with
 documents only (UCP 600 Art. 5); a discrepancy means delayed payment
 plus a fee, so catching errors early is the whole point.
 
-## Current status (2026-11-12)
+## Current status (2026-11-13)
 - Session 1 done: concept and the 15 checking rules are fixed (below).
-- Session 2 done: skeleton + file upload + 3 passing e2e tests +
-  first commit, pushed to GitHub (public, jeonghoheo/lc-checker).
-- Nothing else is built yet: no extraction, no rule engine, no AI calls.
+- Session 2 done: skeleton + file upload + passing e2e tests,
+  pushed to GitHub (public, jeonghoheo/lc-checker).
+- Session 3 blocks 1-3 done: text extraction for text/PDF,
+  document-type detection on upload, and an MT700 LC parser that
+  stores structured values in Document.extractedData (JSONB).
+  GET document-set returns both docType and extractedData.
+- Block 3 extra check is blocked: samples/set-b/lc-mt700.txt does
+  not exist yet, so set B could not be parsed and compared.
+- No rule engine and no AI calls yet.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -25,7 +31,8 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 
 ## Architecture
 - apps/api: NestJS + Prisma. Tables: DocumentSet (one checking job),
-  Document (one uploaded file; docType is null for now).
+  Document (one uploaded file; docType is detected, extractedData
+  holds parsed LC values).
 - Uploaded files are stored on disk under `uploads/<setId>/` with
   unique names. The database stores only records (names, paths, sizes).
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.

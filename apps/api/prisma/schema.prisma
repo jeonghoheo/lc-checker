@@ -22,5 +22,6 @@ model Document {
   mimeType     String
   sizeBytes    Int
   docType      String?
+  extractedData Json?
   uploadedAt   DateTime    @default(now())
 }

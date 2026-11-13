@@ -10,3 +10,12 @@
 - 한 일: 추출 텍스트로 서류 종류 감지 (LC, INVOICE, PACKING_LIST, BILL_OF_LADING, INSURANCE, 그 외 null). 업로드 후 자동 감지해 Document.docType에 저장. GET document-set 응답에 docType 포함. 샘플 5종 단위 테스트 추가.
 - 테스트: 통과 6 / 전체 6 (vitest 단위), 통과 4 / 전체 4 (e2e). lint 오류 없음.
 - 특이사항: 텍스트 추출에 실패하면 업로드는 막지 않고 docType만 null로 둠. LC·INVOICE 샘플을 실제 업로드해 GET 응답의 docType도 수동 확인.
+
+## Block 3 — Extract values from the letter of credit (2026-11-13)
+- Done: Added `LcParserService` and a nullable `Document.extractedData` JSONB column via Prisma migration. Documents detected as `LC` are parsed on upload and the structured values are stored; GET document-set returns `extractedData`. Added unit tests covering all requested LC fields for `samples/set-a/lc-mt700.txt`.
+- Tests: passed 7 / total 7 (vitest unit), passed 4 / total 4 (e2e). Lint has no errors. Manual upload confirmed the LC response includes both `docType` and `extractedData`.
+- Notes: The Block 3 extra check could not run because `samples/set-b/lc-mt700.txt` is missing. Exact failure:
+  ```
+  Error: ENOENT: no such file or directory, open '../../samples/set-b/lc-mt700.txt'
+  ```
+  Stopped as required; no unverified fix or set B values were invented.
