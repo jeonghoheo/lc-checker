@@ -57,6 +57,10 @@ plus a fee, so catching errors early is the whole point.
   visually hidden), step labels, type-colored document chips, status
   summary chips, and card-style result rows. The date input's inner
   placeholder still follows the browser locale.
+- Block 18 / v1.3.0 done: the web uploader accepts multiple files, a
+  whole folder, and dropped folders. Uploads run sequentially with a
+  progress count, non-PDF/text files are skipped and counted, and the
+  old single-file upload button was removed.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -80,9 +84,10 @@ on purpose so Docker owns port 5432. Restart it only if asked:
 - `PATCH /document-sets/:id/presentation-date` sets the presentation
   date; `POST /document-sets/:id/check` stores and returns a check run.
 - apps/web: one page with Korean/English/Russian UI for the full flow
-  in a light card layout — create a set, upload files through a custom
-  drop zone, inspect extracted values, set the presentation date, run
-  the check, and review FAIL/SKIPPED/PASS results with AI notes.
+  in a light card layout — create a set, upload multiple files or a
+  folder through a custom drop zone, inspect extracted values, set the
+  presentation date, run the check, and review FAIL/SKIPPED/PASS
+  results with AI notes.
 
 ## Frozen scope (v1)
 - Text-layer PDF and text files only. NO OCR (real scans are v2).
@@ -116,7 +121,7 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-v1.2.0 is complete. Possible v2 work (not started): OCR for scanned
+v1.3.0 is complete. Possible v2 work (not started): OCR for scanned
 documents, ISBP coverage, translating API result messages and the
 report, and support for uploading a certificate of origin.
 

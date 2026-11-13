@@ -1,6 +1,7 @@
 import {
   useRef,
   useState,
+  type ChangeEvent,
   type DragEvent,
   type KeyboardEvent,
 } from 'react'
@@ -430,6 +431,84 @@ function CheckResults({
   )
 }
 
+function isAllowedFile(file: File) {
+  const type = file.type.toLowerCase()
+  const name = file.name.toLowerCase()
+  return (
+    type === 'application/pdf' ||
+    type === 'text/plain' ||
+    name.endsWith('.pdf') ||
+    name.endsWith('.txt')
+  )
+}
+
+function readDirectoryEntries(
+  reader: FileSystemDirectoryReader,
+): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const entries: FileSystemEntry[] = []
+
+    function readBatch() {
+      reader.readEntries(
+        (batch) => {
+          if (batch.length === 0) {
+            resolve(entries)
+            return
+          }
+          entries.push(...batch)
+          readBatch()
+        },
+        (error) => reject(error),
+      )
+    }
+
+    readBatch()
+  })
+}
+
+async function filesFromEntry(entry: FileSystemEntry): Promise<File[]> {
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      ;(entry as FileSystemFileEntry).file(
+        (file) => resolve([file]),
+        () => resolve([]),
+      )
+    })
+  }
+
+  if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader()
+    const entries = await readDirectoryEntries(reader)
+    const nested = await Promise.all(entries.map((child) => filesFromEntry(child)))
+
+    return nested.flat()
+  }
+
+  return []
+}
+
+async function collectDroppedFiles(dataTransfer: DataTransfer): Promise<File[]> {
+  const entries: FileSystemEntry[] = []
+
+  for (const item of Array.from(dataTransfer.items ?? [])) {
+    const entry =
+      typeof item.webkitGetAsEntry === 'function'
+        ? item.webkitGetAsEntry()
+        : null
+
+    if (entry) {
+      entries.push(entry)
+    }
+  }
+
+  if (entries.length > 0) {
+    const nested = await Promise.all(entries.map((entry) => filesFromEntry(entry)))
+    return nested.flat()
+  }
+
+  return Array.from(dataTransfer.files ?? [])
+}
+
 function initialLanguage(): Language {
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY)
   return stored === 'en' || stored === 'ru' || stored === 'ko' ? stored : 'ko'
@@ -440,15 +519,20 @@ function App() {
   const dictionary = dictionaries[language]
   const [setId, setSetId] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
-  const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number
+    total: number
+  } | null>(null)
+  const [ignoredCount, setIgnoredCount] = useState(0)
   const [errorKey, setErrorKey] = useState<ErrorKey | null>(null)
   const [messageKey, setMessageKey] = useState<MessageKey | null>(null)
   const [expandedDocIds, setExpandedDocIds] = useState<string[]>([])
   const [presentationDate, setPresentationDate] = useState('')
   const [checkRun, setCheckRun] = useState<CheckRun | null>(null)
   const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const filesInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   function changeLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage)
@@ -493,43 +577,84 @@ function App() {
     }
   }
 
-  async function uploadFile(selectedFile: File | null = file) {
+  async function uploadSingleFile(targetSetId: string, selectedFile: File) {
+    const formData = new FormData()
+    formData.append('file', selectedFile)
+
+    const response = await fetch(
+      `${API_URL}/document-sets/${targetSetId}/documents`,
+      { method: 'POST', body: formData },
+    )
+
+    if (!response.ok) {
+      throw new Error('Request failed')
+    }
+  }
+
+  async function startUploadBatch(selectedFiles: File[]) {
     if (!setId) {
       setErrorKey('noSet')
       return
     }
-    if (!selectedFile) {
-      setErrorKey('noFile')
-      return
-    }
+
+    const allowedFiles = selectedFiles.filter(isAllowedFile)
+    const ignored = selectedFiles.length - allowedFiles.length
 
     setBusy(true)
     setErrorKey(null)
     setMessageKey(null)
+    setIgnoredCount(ignored)
+    setUploadProgress(
+      allowedFiles.length > 0
+        ? { done: 0, total: allowedFiles.length }
+        : null,
+    )
+    setCheckRun(null)
+
+    let failed = false
 
     try {
-      const formData = new FormData()
-      formData.append('file', selectedFile)
+      for (let index = 0; index < allowedFiles.length; index += 1) {
+        try {
+          await uploadSingleFile(setId, allowedFiles[index])
+        } catch {
+          failed = true
+        }
 
-      const response = await fetch(
-        `${API_URL}/document-sets/${setId}/documents`,
-        { method: 'POST', body: formData },
-      )
-      if (!response.ok) {
-        throw new Error('Request failed')
+        setUploadProgress({
+          done: index + 1,
+          total: allowedFiles.length,
+        })
       }
 
-      await refreshDocuments(setId)
-      setCheckRun(null)
-      setFile(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      try {
+        await refreshDocuments(setId)
+      } catch {
+        failed = true
       }
-      setMessageKey('uploaded')
-    } catch {
-      setErrorKey('upload')
+
+      if (failed) {
+        setErrorKey('upload')
+      } else if (allowedFiles.length > 0) {
+        setMessageKey('uploaded')
+      }
     } finally {
+      setUploadProgress(null)
       setBusy(false)
+      if (filesInputRef.current) {
+        filesInputRef.current.value = ''
+      }
+      if (folderInputRef.current) {
+        folderInputRef.current.value = ''
+      }
+    }
+  }
+
+  async function handleFilesSelected(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? [])
+
+    if (selectedFiles.length > 0) {
+      await startUploadBatch(selectedFiles)
     }
   }
 
@@ -632,11 +757,18 @@ function App() {
     }
   }
 
-  function openFilePicker() {
+  function openFilesPicker() {
     if (!setId || busy) {
       return
     }
-    fileInputRef.current?.click()
+    filesInputRef.current?.click()
+  }
+
+  function openFolderPicker() {
+    if (!setId || busy) {
+      return
+    }
+    folderInputRef.current?.click()
   }
 
   async function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -647,20 +779,21 @@ function App() {
       return
     }
 
-    const droppedFile = event.dataTransfer.files?.[0] ?? null
+    try {
+      const droppedFiles = await collectDroppedFiles(event.dataTransfer)
 
-    if (!droppedFile) {
-      return
+      if (droppedFiles.length > 0) {
+        await startUploadBatch(droppedFiles)
+      }
+    } catch {
+      setErrorKey('upload')
     }
-
-    setFile(droppedFile)
-    await uploadFile(droppedFile)
   }
 
   function handleDropZoneKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
-      openFilePicker()
+      openFilesPicker()
     }
   }
 
@@ -718,11 +851,27 @@ function App() {
         </div>
 
         <input
-          ref={fileInputRef}
+          ref={filesInputRef}
           className="native-file-input"
           type="file"
           accept="application/pdf,text/plain"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          multiple
+          onChange={handleFilesSelected}
+          disabled={!setId || busy}
+        />
+        <input
+          ref={(element) => {
+            folderInputRef.current = element
+            if (element) {
+              element.setAttribute('webkitdirectory', '')
+              element.setAttribute('directory', '')
+            }
+          }}
+          className="native-file-input"
+          type="file"
+          accept="application/pdf,text/plain"
+          multiple
+          onChange={handleFilesSelected}
           disabled={!setId || busy}
         />
 
@@ -730,7 +879,7 @@ function App() {
           className={`drop-zone${dragOver ? ' drag-over' : ''}${
             !setId || busy ? ' disabled' : ''
           }`}
-          onClick={openFilePicker}
+          onClick={openFilesPicker}
           onKeyDown={handleDropZoneKeyDown}
           onDragEnter={(event) => {
             event.preventDefault()
@@ -753,22 +902,49 @@ function App() {
           tabIndex={!setId || busy ? -1 : 0}
           aria-disabled={!setId || busy}
         >
-          <span className="drop-hint">{dictionary.dropHint}</span>
-          <span className="drop-sub">{dictionary.dropSub}</span>
-          {file && <span className="drop-file">{file.name}</span>}
-        </div>
-
-        {file && (
-          <div className="actions">
+          {uploadProgress ? (
+            <span className="upload-progress">
+              {dictionary.uploadProgress(
+                uploadProgress.done,
+                uploadProgress.total,
+              )}
+            </span>
+          ) : (
+            <>
+              <span className="drop-hint">{dictionary.dropHint}</span>
+              <span className="drop-sub">{dictionary.dropSub}</span>
+            </>
+          )}
+          <div className="drop-actions">
             <button
               type="button"
-              className="secondary"
-              onClick={() => uploadFile()}
-              disabled={!setId || !file || busy}
+              className="secondary small"
+              onClick={(event) => {
+                event.stopPropagation()
+                openFilesPicker()
+              }}
+              disabled={!setId || busy}
             >
-              {dictionary.upload}
+              {dictionary.chooseFiles}
+            </button>
+            <button
+              type="button"
+              className="secondary small"
+              onClick={(event) => {
+                event.stopPropagation()
+                openFolderPicker()
+              }}
+              disabled={!setId || busy}
+            >
+              {dictionary.chooseFolder}
             </button>
           </div>
+        </div>
+
+        {ignoredCount > 0 && (
+          <p className="ignored-note">
+            {dictionary.ignoredFiles(ignoredCount)}
+          </p>
         )}
 
         <h3>{dictionary.sectionDocuments}</h3>

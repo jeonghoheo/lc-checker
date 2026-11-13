@@ -23,6 +23,10 @@ export type Dictionary = {
   downloadReport: string
   dropHint: string
   dropSub: string
+  chooseFiles: string
+  chooseFolder: string
+  uploadProgress: (done: number, total: number) => string
+  ignoredFiles: (count: number) => string
   valueLc: string
   valueDoc: string
   summary: (passed: number, failed: number, skipped: number) => string
@@ -138,6 +142,10 @@ export const dictionaries: Record<Language, Dictionary> = {
     downloadReport: '보고서 받기',
     dropHint: '파일을 여기로 끌어다 놓거나 눌러서 선택하세요',
     dropSub: 'PDF와 텍스트 파일만 됩니다',
+    chooseFiles: '파일 여러 개 선택',
+    chooseFolder: '폴더 통째로 선택',
+    uploadProgress: (done, total) => `올리는 중 ${done}/${total}`,
+    ignoredFiles: (count) => `형식이 다른 파일 ${count}개는 건너뜀`,
     valueLc: '신용장 값',
     valueDoc: '서류 값',
     summary: (passed, failed, skipped) =>
@@ -272,6 +280,11 @@ export const dictionaries: Record<Language, Dictionary> = {
     downloadReport: 'Download report',
     dropHint: 'Drag files here, or click to choose',
     dropSub: 'PDF and text files only',
+    chooseFiles: 'Choose files',
+    chooseFolder: 'Choose a whole folder',
+    uploadProgress: (done, total) => `Uploading ${done}/${total}`,
+    ignoredFiles: (count) =>
+      `${count} file(s) skipped — not PDF or text`,
     valueLc: 'Letter of credit',
     valueDoc: 'Document',
     summary: (passed, failed, skipped) =>
@@ -406,6 +419,11 @@ export const dictionaries: Record<Language, Dictionary> = {
     downloadReport: 'Скачать отчёт',
     dropHint: 'Перетащите файлы сюда или нажмите, чтобы выбрать',
     dropSub: 'Только файлы PDF и текстовые файлы',
+    chooseFiles: 'Выбрать файлы',
+    chooseFolder: 'Выбрать папку целиком',
+    uploadProgress: (done, total) => `Загрузка ${done}/${total}`,
+    ignoredFiles: (count) =>
+      `Пропущено файлов: ${count} — не PDF и не текст`,
     valueLc: 'Аккредитив',
     valueDoc: 'Документ',
     summary: (passed, failed, skipped) =>

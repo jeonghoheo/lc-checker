@@ -16,7 +16,8 @@
 - v1.0.1 (Block 14): provider-neutral LLM config (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL with DEEPSEEK_* fallback), .env.example with DeepSeek/OpenAI/OpenRouter/LiteLLM examples, README provider-neutral wording.
 - Block 15 — English and Russian README versions (done 2026-11-13)
 - Block 16 — UI in Korean, English, and Russian (done 2026-11-13); v1.1.0
-- Block 17 — light card UI redesign + custom upload area (done 2026-11-13); v1.2.0
+- Block 17 — UI redesign: light card layout + custom upload area (done 2026-11-13); v1.2.0
+- Block 18 — multi-file, folder, and folder-drop uploads (done 2026-11-13); v1.3.0
 
 ## Block 15 — English and Russian README versions (done)
 
@@ -43,7 +44,7 @@ In apps/web:
 - Verify: `npm run build` and `npm run lint` pass; then a manual run with the UI switched to English — upload the set B files, run the check, and record in the log the English summary line and one FAIL row's rule name + AI note label as displayed. Repeat the summary-line check in Russian.
 - Create git tag `v1.1.0` on the final commit and push it.
 
-## Block 17 — UI redesign: light card layout + custom upload area (owner-approved direction) (done)
+## Block 17 — UI redesign: light card layout + custom upload area (done)
 
 Visual redesign ONLY. No behavior changes: same API calls, same state flow, same dictionary keys (plus the new ones listed below). Plain CSS in the existing stylesheet file(s) of apps/web. No new npm dependencies, no CSS framework, no component library.
 
@@ -76,3 +77,24 @@ Verify:
 - Switch to English: confirm the drop-zone text is in English and no browser-native file input is visible; record the English dropHint line in the log. Switch to Russian: confirm the drop-zone text is in Russian; record it in the log.
 - Record in the log, honestly: the date input's inner placeholder still follows the browser locale (not translated by the page).
 - Create git tag `v1.2.0` on the final commit and push it (with the tag).
+
+## Block 18 — Upload many files at once: multi-select, whole folder, folder drop (done)
+
+Owner's request after using v1.2.0: uploading one file at a time is inconvenient. Web app only — the API endpoint stays as it is (single-file POST); the web app calls it once per file, sequentially (not in parallel, to keep extraction load sane).
+
+Changes in apps/web:
+- The main hidden file input gets the `multiple` attribute. Add a SECOND hidden file input for folder selection with the `webkitdirectory` attribute (set it via ref callback or attribute spread — React has no typed prop for it). Both inputs stay visually hidden like the current one.
+- Inside or directly under the drop zone, add two small secondary buttons: chooseFiles — ko "파일 여러 개 선택", en "Choose files", ru "Выбрать файлы"; chooseFolder — ko "폴더 통째로 선택", en "Choose a whole folder", ru "Выбрать папку целиком". The chooseFiles button (and clicking the drop zone, as now) opens the multi-select input; the chooseFolder button opens the folder input. Stop click propagation so the folder button does not also trigger the zone's picker.
+- Upload flow: selecting files through either picker OR dropping starts the upload immediately for ALL chosen files (the drop path already works this way; remove the old select-then-press-업로드 two-step and the single-`file` state). Upload sequentially in selection order. During the batch show progress text in the drop zone area: uploadProgress(done, total) — ko `올리는 중 ${done}/${total}`, en `Uploading ${done}/${total}`, ru `Загрузка ${done}/${total}`.
+- Drag and drop: handle multiple files, AND a dropped folder — traverse `dataTransfer.items` with `webkitGetAsEntry` recursively to collect the files inside dropped folders; fall back to `dataTransfer.files` when entries are unavailable.
+- Type filter: only PDF and text files are uploaded (same as the current `accept`). Any other file in the selection/drop is ignored and counted; if the count is above zero, after the batch show: ignoredFiles(n) — ko `형식이 다른 파일 ${n}개는 건너뜀`, en `${n} file(s) skipped — not PDF or text`, ru `Пропущено файлов: ${n} — не PDF и не текст`.
+- If an individual upload fails mid-batch, continue with the remaining files, refresh the document list at the end, and show the existing `upload` error message if at least one file failed (plus the success message only when nothing failed). Clear the previous check run once at the start of a batch, not per file.
+- After a batch finishes, reset both inputs' values so the same files can be chosen again.
+- All new strings go into all three dictionaries in src/i18n.ts (uploadProgress and ignoredFiles as functions of their numbers, following the existing summary-string pattern).
+
+Verify:
+- `npm run build` and `npm run lint` pass in apps/web.
+- Manual: in a new set, pick all 4 set B files at once with the multi-select picker — all 4 document rows appear with the correct type chips. Then run the check on that set: summary must still be pass 7 · discrepancy 6 · skipped 2.
+- Manual: use the folder button on `samples/set-c` in a new set — all 5 files appear. Manual: drag the `samples/set-a` folder onto the drop zone in a new set — its 4 files appear.
+- Record the three manual outcomes in the log.
+- Create git tag `v1.3.0` on the final commit and push it (with the tag).

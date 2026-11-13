@@ -496,3 +496,31 @@ input[type='date'] {
     gap: 2px;
   }
 }
+
+.drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+button.small {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.upload-progress {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2456c8;
+}
+
+.ignored-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdf0e0;
+  color: #9a6206;
+  font-size: 12px;
+}

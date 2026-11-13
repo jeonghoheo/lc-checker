@@ -203,3 +203,12 @@
 - Tests: `npm run build` and `npm run lint` passed in `apps/web`. Manual set B run in Korean showed the summary chips `["통과 7개", "불일치 6개", "검사 못함 2개"]`.
 - Manual language checks: English drop-zone text was `Drag files here, or click to choose` / `PDF and text files only`; the native file input measured 1×1 with `clip: rect(0, 0, 0, 0)`, so it is not visible. Russian drop-zone text was `Перетащите файлы сюда или нажмите, чтобы выбрать` / `Только файлы PDF и текстовые файлы`.
 - Notes: The date input's inner placeholder still follows the browser locale and is not translated by the page. No API behavior changed. Tag `v1.2.0` is created on the final commit. No failures.
+
+## Block 18 — Upload many files at once: multi-select, whole folder, folder drop (2026-11-13)
+- Done: Added multi-file and folder uploads to the web app. The main hidden file input is now `multiple`; a second hidden `webkitdirectory` input handles folder selection. The custom drop zone now uploads immediately, supports multiple files and recursively reads dropped folders via `webkitGetAsEntry`, filters to PDF/text with an ignored-file count, and shows per-batch progress. Removed the old single-file selection and "업로드" two-step. Both inputs reset after each batch.
+- Tests: `npm run build` and `npm run lint` passed in `apps/web`.
+- Manual outcomes:
+  1. Multi-select of all 4 set B files: all 4 rows appeared with chips `["신용장", "상업송장", "포장명세서", "선하증권"]`; the check summary chips were `["통과 7개", "불일치 6개", "검사 못함 2개"]`.
+  2. Folder selection on `samples/set-c`: all 5 files appeared. Headless Chrome could not drive the native folder dialog, so the folder button was clicked and the set-c directory was supplied directly to the folder input.
+  3. Folder drop of `samples/set-a`: 4 files appeared. Headless automation cannot perform an OS-level folder drag, so this was exercised through a browser `DataTransfer` entry tree on the drop zone; the same recursive entry-handling path ran.
+- Notes: No API changes. No failures. Tag `v1.3.0` is created on the final commit.
