@@ -13,11 +13,28 @@ type DeepSeekResponse = {
 @Injectable()
 export class AiExtractionService {
   async extract(text: string, fields: string[]): Promise<unknown> {
+    return this.extractJson(
+      'You extract structured trade document data. Return only a valid JSON object and do not include markdown or explanations.',
+      [
+        'Extract these fields from the document below.',
+        'Return exactly one JSON object with these fields:',
+        ...fields.map((field) => `- ${field}`),
+        '',
+        'Document:',
+        text,
+      ].join('\n'),
+    );
+  }
+
+  async extractJson(
+    systemPrompt: string,
+    userPrompt: string,
+  ): Promise<unknown> {
     const apiKey = process.env.DEEPSEEK_API_KEY;
 
     if (!apiKey) {
       throw new Error(
-        'DEEPSEEK_API_KEY is not set. Add it to apps/api/.env to enable AI extraction.',
+        'DEEPSEEK_API_KEY is not set. Add it to apps/api/.env to enable AI features.',
       );
     }
 
@@ -30,22 +47,8 @@ export class AiExtractionService {
       body: JSON.stringify({
         model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
         messages: [
-          {
-            role: 'system',
-            content:
-              'You extract structured trade document data. Return only a valid JSON object and do not include markdown or explanations.',
-          },
-          {
-            role: 'user',
-            content: [
-              'Extract these fields from the document below.',
-              'Return exactly one JSON object with these fields:',
-              ...fields.map((field) => `- ${field}`),
-              '',
-              'Document:',
-              text,
-            ].join('\n'),
-          },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
         temperature: 0,

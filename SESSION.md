@@ -1,4 +1,4 @@
-# SESSION.md — Session 4 work orders (written by the reviewer, executed by OpenCode)
+# SESSION.md — Session 5 work orders (written by the reviewer, executed by OpenCode)
 
 ## Working rules (fixed)
 - When the owner says "Run Block N", execute only Block N below. One block at a time.
@@ -13,58 +13,24 @@
 - At the end of the last block of a session, also update the Current status section of AGENTS.md and push it together.
 
 ## Done so far
-- Session 3 complete (2026-11-13): text extraction, document type detection, LC parser (hardcoding check passed on set C), AI extraction for invoice / packing list / bill of lading / insurance — live DeepSeek runs verified against known sample values.
-- Block 6 — check plumbing + rules 1-8 (done 2026-11-13)
-- Block 7 — rules 9-15 (done 2026-11-13)
-- Block 8 — scoring run against planted errors (done 2026-11-13); session 4 complete with 12 / 12 planted errors caught.
+- Session 3 complete (2026-11-13): extraction for all 5 document types, live-verified.
+- Session 4 complete (2026-11-13): rule engine, all 15 rules. Scoring run: planted errors caught 12 / 12, zero false positives on the trap items (unit 44, e2e 9).
+- Block 9 — AI second opinion on borderline failures (done 2026-11-13); session 5 complete.
 
-## Shared definitions for Session 4 (all blocks)
-- A check runs over one DocumentSet. Inputs are the documents' extractedData plus the set's presentationDate.
-- Rule result statuses: PASS, FAIL, SKIPPED (a rule is SKIPPED, never FAIL, when a document or value it needs is missing; record the reason).
-- Every FAIL result stores both compared values and a short message, so a report screen can show them side by side later.
-- Name comparison (rules 11-12): take the first line / part before the first comma, uppercase, collapse whitespace, then compare for equality.
-- Shipment date means the bill of lading's shippedOnBoardDate. Only rule 4 has a fallback (see Block 7).
+## Block 9 — AI second opinion on borderline failures (session 5) (done)
 
-## Block 6 — Check plumbing + rules 1-8 (dates and numbers) (done)
+Idea: three rules fail on text differences that a word comparison cannot judge — rule 9 (goods description wording), rule 11 (consignee name), rule 12 (notify party name). A one-letter typo is not the same problem as a different company or a missing product word. Add an AI second opinion to those FAILs. The deterministic FAIL always stands; the AI only adds an advisory note that the review screen will show later.
 
 In apps/api:
-- Add a nullable `presentationDate` (date) to DocumentSet via Prisma migration, plus `PATCH /document-sets/:id/presentation-date` accepting { "presentationDate": "2026-12-10" }.
-- Add tables CheckRun (id, documentSetId, createdAt) and CheckResult (checkRunId, ruleNo, status, detail JSON) via migration.
-- Add `POST /document-sets/:id/check`: runs the rule engine over the set, stores a CheckRun with one CheckResult per rule (15 rows), and returns the run with its results.
-- Small extractor amendment: add `issueDate` (the B/L "Place and Date of Issue", ISO) to the bill of lading extraction schema, its mocked fixture, and its unit test (set A: 2026-11-25).
-- Implement rules 1-8 as pure functions over extractedData:
-  1. B/L shippedOnBoardDate <= LC latestShipmentDate.
-  2. presentationDate minus shippedOnBoardDate <= LC presentationDays days. SKIPPED if presentationDate is not set.
-  3. presentationDate <= LC expiryDate. SKIPPED if presentationDate is not set.
-  4. (Implemented in Block 7 with the other document rules — return SKIPPED "not implemented yet" in this block.)
-  5. Invoice totalAmount <= LC amount adjusted by LC tolerance percent (tolerance "00/00" means no excess allowed), and invoice currency == LC currency.
-  6. Packing list totalGrossWeightKg == B/L totalGrossWeightKg.
-  7. Invoice totalQuantity == packing list totalQuantity.
-  8. Packing list totalCartons == B/L totalCartons.
-  Rules 9-15 also return SKIPPED "not implemented yet" in this block, so a check run always stores 15 results.
-- Unit tests for rules 1-8: for each rule one passing case and one failing case built from the sample values (e.g. rule 1 fails with shipped 2026-12-02 vs deadline 2026-11-30; rule 5 fails with invoice 48,500 vs LC 48,000).
+- Add an AiReviewService using the existing DeepSeek setup (same env vars). Input: the rule number, the two compared values, and the rule's FAIL detail. Output JSON: { "verdict": ..., "reason": "one short sentence" }.
+  - For rule 9, verdict is one of: "corresponds" (different wording, same goods), "discrepancy" (goods description really differs), "unsure".
+  - For rules 11-12, verdict is one of: "likely_typo" (same company, small typing difference), "different" (a different company), "unsure".
+  - The prompt must include the UCP 600 idea in plain words: invoice description must correspond to the LC description (Art. 18(c)); data must not conflict (Art. 14(d)) — exact sameness is not required.
+- In the check flow (POST /document-sets/:id/check), after the deterministic results are stored, run the AI review for FAIL results of rules 9, 11, 12 only, and store the result inside that CheckResult's detail as `aiReview`. If DEEPSEEK_API_KEY is missing or the call fails, skip the review and leave aiReview absent — the check must still complete normally.
+- Unit tests with a mocked AI client (no live calls): (a) rule 9 FAIL with a missing product word returns verdict "discrepancy" in the stored detail; (b) rule 11 FAIL with consignee "NORDLYS COSMETICS GMBH" vs LC applicant "NORDLYS COSMETICS GMBH" returns verdict "likely_typo"; (c) with the AI client failing, the check still completes and aiReview is absent.
+- The session 4 scoring e2e test must still pass unchanged (statuses are not affected by aiReview).
+- Live spot checks (real API), recorded in the log with the AI's verdict and reason:
+  1. Set B's rule 9 case: LC description vs the set B invoice items (missing "Airless"). Expected verdict: "discrepancy".
+  2. A synthetic typo case for rule 11: consignee "NORDLYS COSMETICS GMBH" vs applicant "NORDLYS COSMETICS GMBH". Expected verdict: "likely_typo".
+  If a live verdict differs from the expected one, record what actually came back — do not tune the test to hide it.
 Run the tests and show me the results.
-
-## Block 7 — Rules 9-15 (cross-checks and presence) (done)
-
-Implement the remaining rules as pure functions over extractedData:
-  9. Goods description: take significant words from the LC goodsDescription (words of length >= 4, excluding AND/WITH/FROM/ONLY/GOODS), uppercase. FAIL if any significant word is missing from the invoice items' descriptions joined together (case-insensitive). The FAIL detail lists the missing words. (Semantic/fuzzy matching is a later session; this block is the deterministic word check.)
-  10. Ports: the first word of LC portOfLoading (e.g. BUSAN) must appear in the B/L portOfLoading, and the first word of LC portOfDischarge (e.g. HAMBURG) must appear in the B/L portOfDischarge (case-insensitive). FAIL names which port mismatched and both values.
-  11. B/L consignee name == LC applicant name (name comparison as defined above).
-  12. B/L notifyParty name == LC applicant name (same comparison).
-  13. Required documents present: scan the LC documentsRequired text (uppercase) for these phrases — "CERTIFICATE OF ORIGIN" -> ORIGIN_CERTIFICATE; "INSURANCE CERTIFICATE" or "INSURANCE POLICY" -> INSURANCE; "COMMERCIAL INVOICE" -> INVOICE; "PACKING LIST" -> PACKING_LIST; "BILL OF LADING" or "BILLS OF LADING" -> BILL_OF_LADING. FAIL lists every required type that has no uploaded document of that type. (ORIGIN_CERTIFICATE can never be uploaded in v1 — that is a known limit, and it is exactly what set C tests.)
-  14. B/L shippedOnBoardDate is not null. FAIL if null (no on-board notation).
-  15. Endorsement: always SKIPPED in v1 with reason "endorsement is not extracted in v1".
-  Rule 4 (from Block 6): insurance issueDate <= shipment date. Use shippedOnBoardDate; if it is null, fall back to the B/L issueDate and mark the result detail with "fallback": "blIssueDate". If there is no insurance document, SKIPPED.
-- Unit tests: one pass and one fail case per rule from sample values (rule 9 fails when "AIRLESS" is missing from invoice items; rule 12 fails for notify "NORDLYS LOGISTICS GMBH"; rule 13 fails when the LC requires a certificate of origin that is not uploaded; rule 14 fails when shippedOnBoardDate is null; rule 4 fails for insurance 2026-11-28 vs shipment 2026-11-25).
-Run the tests and show me the results.
-
-## Block 8 — Scoring run against the planted errors (session 4 finale) (done)
-
-Add an e2e scoring test that builds three document sets from fixture extractedData matching the samples exactly (do not call the live API in this test):
-- Set A fixtures (clean set), presentationDate 2026-12-10. Expect: 0 FAIL.
-- Set B fixtures (B/L shipped on board 2026-12-02, B/L gross 1210 / cartons 480 vs packing 1250 / 500, invoice items missing the word "Airless", notify party "NORDLYS LOGISTICS GMBH"), presentationDate 2026-12-25. Expect FAIL on exactly rules {1, 2, 6, 8, 9, 12} and no other FAIL.
-- Set C fixtures (insurance issueDate 2026-11-28, invoice total 48,500, B/L port of discharge Rotterdam, B/L shippedOnBoardDate null with issueDate 2026-11-25, packing totalQuantity 9,600 vs invoice 10,000, LC documentsRequired includes a certificate of origin), presentationDate 2026-12-10. Expect FAIL on exactly rules {4, 5, 7, 10, 13, 14} and no other FAIL.
-The test asserts the exact FAIL rule sets above — any extra FAIL (a false positive on the trap items: set B's reordered shipper address, set C's general-terms packing description) fails the test.
-Record the scorecard in SESSION-LOG.md: sets A/B/C, expected vs actual FAIL rules, planted errors caught 12 / 12.
-Update AGENTS.md Current status (session 4 complete) and push everything together.

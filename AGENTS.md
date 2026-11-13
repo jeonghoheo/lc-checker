@@ -31,6 +31,11 @@ plus a fee, so catching errors early is the whole point.
 - Session 4 scoring passed without live AI calls: set A has 0 FAIL,
   set B fails exactly rules 1, 2, 6, 8, 9, 12, and set C fails
   exactly rules 4, 5, 7, 10, 13, 14. Planted errors caught: 12/12.
+- Session 5 done: borderline FAILs of rules 9, 11, and 12 get an AI
+  second opinion stored as `aiReview` in CheckResult.detail. If the
+  AI call fails, the check still completes without the advisory.
+  Live spot checks: set B rule 9 -> discrepancy, synthetic rule 11
+  typo -> likely_typo.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
@@ -46,7 +51,8 @@ on purpose so Docker owns port 5432. Restart it only if asked:
   optional presentationDate), Document (one uploaded file; docType is
   detected, extractedData holds parsed LC values or AI-extracted
   document values), CheckRun (one execution of the rule engine), and
-  CheckResult (one of the 15 rule results with status and detail JSON).
+  CheckResult (one of the 15 rule results with status and detail JSON;
+  borderline FAILs may also include an `aiReview` advisory).
 - Uploaded files are stored on disk under `uploads/<setId>/` with
   unique names. The database stores only records (names, paths, sizes).
 - Upload accepts PDF and plain text only, max 10 MB. Others get 400.
@@ -87,9 +93,10 @@ every planted error to the rule that must catch it. Extraction and
 rules are graded against these sets.
 
 ## Next work
-Session 3 value extraction and Session 4 rule engine are done. Next is
-showing check results in the web review screen and adding the result
-report UI. Not started yet.
+Session 3 value extraction, Session 4 rule engine, and Session 5 AI
+advisory review are done. Next is showing check results and `aiReview`
+advisories in the web review screen and adding the result report UI.
+Not started yet.
 
 ## Working style
 The owner does not write code; he directs in small steps and reviews

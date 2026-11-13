@@ -150,3 +150,11 @@
 
   Planted errors caught: 12 / 12.
 - Notes: The trap items produced no extra FAIL results (set B's reordered shipper address and set C's general-terms packing description). Session 4 is complete.
+
+## Block 9 — AI second opinion on borderline failures (session 5) (2026-11-13)
+- Done: Added a reusable `AiExtractionService.extractJson`, an `AiReviewService` that asks DeepSeek for a rule-specific verdict with plain-language UCP 600 guidance, and post-check review for FAIL results of rules 9, 11, and 12. The advisory result is stored as `aiReview` inside `CheckResult.detail`; if the AI call fails, the review is skipped and the check still completes. Added unit tests with a mocked AI client and kept the scoring e2e offline with a stub review service.
+- Tests: passed 47 / total 47 (vitest unit), passed 9 / total 9 (e2e). Lint has no errors.
+- Live spot checks:
+  1. Set B rule 9 (invoice items missing "Airless"): verdict `discrepancy`, reason: "The invoice omits the LC goods word \"AIRLESS\" from the pump bottles description, so the invoice description does not correspond to the LC description under Art. 18(c)."
+  2. Synthetic rule 11 typo (consignee `NORDLYS COSMETIC GMBH` missing the "S" in COSMETICS vs applicant `NORDLYS COSMETICS GMBH`): verdict `likely_typo`, reason: "The consignee name differs from the LC applicant only by a missing \"S\" in \"COSMETICS\", with the address otherwise identical, indicating a likely typo."
+- Notes: The session 4 scoring e2e test still asserts the same exact FAIL statuses and passes. The SESSION.md wording listed identical names for the rule 11 spot check, so a one-letter synthetic typo was used to create an actual rule 11 FAIL. Session 5 is complete.

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ExtractedBillOfLading } from '../document-sets/bill-of-lading-extraction.service.js';
@@ -6,6 +6,7 @@ import { ExtractedInsurance } from '../document-sets/insurance-extraction.servic
 import { ExtractedInvoice } from '../document-sets/invoice-extraction.service.js';
 import { ParsedLc } from '../document-sets/lc-parser.service.js';
 import { ExtractedPackingList } from '../document-sets/packing-list-extraction.service.js';
+import { AiReviewService } from './ai-review.service.js';
 import { CheckContext, evaluateRules } from './rules.js';
 
 type SetDocument = {
@@ -20,7 +21,12 @@ type SetWithDocuments = {
 
 @Injectable()
 export class ChecksService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ChecksService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiReviewService: AiReviewService,
+  ) {}
 
   async runCheck(setId: string) {
     const set = await this.prisma.documentSet.findUnique({
@@ -33,8 +39,7 @@ export class ChecksService {
     }
 
     const results = evaluateRules(this.buildContext(set));
-
-    return this.prisma.checkRun.create({
+    const run = await this.prisma.checkRun.create({
       data: {
         documentSetId: setId,
         results: {
@@ -47,6 +52,53 @@ export class ChecksService {
       },
       include: { results: { orderBy: { ruleNo: 'asc' } } },
     });
+
+    await this.applyAiReviews(run.results);
+
+    return run;
+  }
+
+  private async applyAiReviews(
+    results: Array<{
+      checkRunId: string;
+      ruleNo: number;
+      status: string;
+      detail: Prisma.JsonValue;
+    }>,
+  ) {
+    for (const result of results) {
+      if (
+        result.status !== 'FAIL' ||
+        ![9, 11, 12].includes(result.ruleNo)
+      ) {
+        continue;
+      }
+
+      try {
+        const detail = result.detail as Record<string, unknown>;
+        const aiReview = await this.aiReviewService.review(
+          result.ruleNo,
+          detail,
+        );
+        const updatedDetail = { ...detail, aiReview };
+
+        await this.prisma.checkResult.update({
+          where: {
+            checkRunId_ruleNo: {
+              checkRunId: result.checkRunId,
+              ruleNo: result.ruleNo,
+            },
+          },
+          data: { detail: updatedDetail as Prisma.InputJsonValue },
+        });
+
+        result.detail = updatedDetail as Prisma.JsonValue;
+      } catch (error) {
+        this.logger.warn(
+          `AI review skipped for rule ${result.ruleNo}: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
+    }
   }
 
   private buildContext(set: SetWithDocuments): CheckContext {

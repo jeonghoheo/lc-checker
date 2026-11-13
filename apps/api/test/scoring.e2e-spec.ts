@@ -5,6 +5,7 @@ import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
+import { AiReviewService } from '../src/checks/ai-review.service.js';
 import { LcParserService } from '../src/document-sets/lc-parser.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
@@ -95,7 +96,12 @@ describe('Scoring run (e2e)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(AiReviewService)
+      .useValue({
+        review: async () => ({ verdict: 'unsure', reason: 'test stub' }),
+      })
+      .compile();
 
     app = moduleRef.createNestApplication();
     await app.init();
