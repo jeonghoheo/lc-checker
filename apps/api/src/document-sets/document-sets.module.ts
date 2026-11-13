@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChecksService } from '../checks/checks.service.js';
 import { AiExtractionService } from './ai-extraction.service.js';
 import { BillOfLadingExtractionService } from './bill-of-lading-extraction.service.js';
 import { DocumentSetsController } from './document-sets.controller.js';
@@ -13,6 +14,7 @@ import { PackingListExtractionService } from './packing-list-extraction.service.
 @Module({
   controllers: [DocumentSetsController],
   providers: [
+    ChecksService,
     DocumentSetsService,
     DocumentTextService,
     DocumentTypeService,

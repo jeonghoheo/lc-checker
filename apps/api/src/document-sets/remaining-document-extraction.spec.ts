@@ -34,6 +34,7 @@ const billOfLadingFixture = {
   portOfLoading: 'BUSAN PORT, REPUBLIC OF KOREA',
   portOfDischarge: 'HAMBURG PORT, GERMANY',
   shippedOnBoardDate: '2026-11-25',
+  issueDate: '2026-11-25',
   totalCartons: 500,
   totalGrossWeightKg: 1250,
   goodsDescription:

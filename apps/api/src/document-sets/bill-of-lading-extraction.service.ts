@@ -3,6 +3,7 @@ import { AiExtractionService } from './ai-extraction.service.js';
 import {
   optionalIsoDate,
   requireBoolean,
+  requireIsoDate,
   requireNumber,
   requireObject,
   requireString,
@@ -18,6 +19,7 @@ export type ExtractedBillOfLading = {
   portOfLoading: string;
   portOfDischarge: string;
   shippedOnBoardDate: string | null;
+  issueDate: string;
   totalCartons: number;
   totalGrossWeightKg: number;
   goodsDescription: string;
@@ -35,6 +37,7 @@ const BILL_OF_LADING_FIELDS = [
   'portOfLoading (string)',
   'portOfDischarge (string)',
   'shippedOnBoardDate (ISO yyyy-mm-dd string, or null if the document has no shipped-on-board date)',
+  'issueDate (ISO yyyy-mm-dd string from the Place and Date of Issue)',
   'totalCartons (number)',
   'totalGrossWeightKg (number)',
   'goodsDescription (string)',
@@ -63,6 +66,7 @@ export class BillOfLadingExtractionService {
       portOfLoading: requireString(data, 'portOfLoading'),
       portOfDischarge: requireString(data, 'portOfDischarge'),
       shippedOnBoardDate: optionalIsoDate(data, 'shippedOnBoardDate'),
+      issueDate: requireIsoDate(data, 'issueDate'),
       totalCartons: requireNumber(data, 'totalCartons'),
       totalGrossWeightKg: requireNumber(data, 'totalGrossWeightKg'),
       goodsDescription: requireString(data, 'goodsDescription'),

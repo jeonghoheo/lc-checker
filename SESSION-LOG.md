@@ -126,3 +126,8 @@
   }
   ```
   These match the known sample values: packing 500 cartons / gross 1250 / net 1100, B/L shipped on board 2026-11-25 / 500 cartons / gross 1250 / freight prepaid true, and insurance certificate MI-CERT-2026-1187 / issue date 2026-11-28 / sum insured USD 53,350.
+
+## Block 6 — Check plumbing + rules 1-8 (dates and numbers) (2026-11-13)
+- Done: Added nullable `presentationDate` (DATE) to `DocumentSet`, `CheckRun` and `CheckResult` tables, `PATCH /document-sets/:id/presentation-date`, and `POST /document-sets/:id/check`. A check run stores 15 results. Added the B/L `issueDate` extraction field and pure rule functions for rules 1-8; rules 4 and 9-15 return SKIPPED "not implemented yet" as specified.
+- Tests: passed 29 / total 29 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors. Manual endpoint run stored 15 results: rules 1, 2, 3, 5, 6, 7, 8 PASS and rules 4, 9-15 SKIPPED for clean set A with presentationDate `2026-12-10`.
+- Notes: No failures. The check response includes the run plus ordered results; FAIL details store a message and both compared values.

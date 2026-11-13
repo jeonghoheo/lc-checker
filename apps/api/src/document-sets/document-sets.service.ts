@@ -48,6 +48,42 @@ export class DocumentSetsService {
     return set;
   }
 
+  async setPresentationDate(id: string, presentationDate: unknown) {
+    if (
+      typeof presentationDate !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(presentationDate)
+    ) {
+      throw new BadRequestException(
+        'presentationDate must be an ISO date string (yyyy-mm-dd).',
+      );
+    }
+
+    const parsed = new Date(`${presentationDate}T00:00:00.000Z`);
+
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.toISOString().slice(0, 10) !== presentationDate
+    ) {
+      throw new BadRequestException(
+        'presentationDate must be a valid date in yyyy-mm-dd format.',
+      );
+    }
+
+    const set = await this.prisma.documentSet.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!set) {
+      throw new NotFoundException(`Document set ${id} not found`);
+    }
+
+    return this.prisma.documentSet.update({
+      where: { id },
+      data: { presentationDate: parsed },
+    });
+  }
+
   async getDocumentText(setId: string, docId: string) {
     const document = await this.prisma.document.findFirst({
       where: { id: docId, setId },

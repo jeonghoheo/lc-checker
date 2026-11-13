@@ -1,13 +1,16 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ChecksService } from '../checks/checks.service.js';
 import { DocumentSetsService } from './document-sets.service.js';
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'text/plain'];
@@ -15,7 +18,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 @Controller('document-sets')
 export class DocumentSetsController {
-  constructor(private readonly documentSetsService: DocumentSetsService) {}
+  constructor(
+    private readonly documentSetsService: DocumentSetsService,
+    private readonly checksService: ChecksService,
+  ) {}
 
   @Post()
   create() {
@@ -52,6 +58,22 @@ export class DocumentSetsController {
     }
 
     return this.documentSetsService.addDocument(id, file);
+  }
+
+  @Patch(':id/presentation-date')
+  setPresentationDate(
+    @Param('id') id: string,
+    @Body() body: { presentationDate?: unknown },
+  ) {
+    return this.documentSetsService.setPresentationDate(
+      id,
+      body?.presentationDate,
+    );
+  }
+
+  @Post(':id/check')
+  runCheck(@Param('id') id: string) {
+    return this.checksService.runCheck(id);
   }
 
   @Get(':id/documents/:docId/text')

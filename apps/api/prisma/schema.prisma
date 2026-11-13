@@ -8,9 +8,11 @@ datasource db {
 }
 
 model DocumentSet {
-  id        String     @id @default(uuid())
-  createdAt DateTime   @default(now())
-  documents Document[]
+  id               String     @id @default(uuid())
+  createdAt        DateTime   @default(now())
+  presentationDate DateTime?  @db.Date
+  documents        Document[]
+  checkRuns        CheckRun[]
 }
 
 model Document {
@@ -24,4 +26,22 @@ model Document {
   docType      String?
   extractedData Json?
   uploadedAt   DateTime    @default(now())
+}
+
+model CheckRun {
+  id            String        @id @default(uuid())
+  documentSetId String
+  documentSet   DocumentSet   @relation(fields: [documentSetId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  results       CheckResult[]
+}
+
+model CheckResult {
+  checkRunId String
+  checkRun   CheckRun @relation(fields: [checkRunId], references: [id], onDelete: Cascade)
+  ruleNo     Int
+  status     String
+  detail     Json
+
+  @@id([checkRunId, ruleNo])
 }
