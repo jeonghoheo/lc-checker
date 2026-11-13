@@ -1,4 +1,9 @@
-import { useRef, useState } from 'react'
+import {
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+} from 'react'
 import {
   dictionaries,
   LANGUAGE_OPTIONS,
@@ -51,6 +56,23 @@ function formatSize(bytes: number) {
 
 function docTypeLabel(docType: string | null, dictionary: Dictionary) {
   return (docType && dictionary.docTypes[docType]) || dictionary.docTypes.unknown
+}
+
+function docTypeClass(docType: string | null) {
+  switch (docType) {
+    case 'LC':
+      return 'chip-lc'
+    case 'INVOICE':
+      return 'chip-invoice'
+    case 'PACKING_LIST':
+      return 'chip-packing'
+    case 'BILL_OF_LADING':
+      return 'chip-bl'
+    case 'INSURANCE':
+      return 'chip-insurance'
+    default:
+      return 'chip-unknown'
+  }
 }
 
 function formatExtractedValue(value: unknown) {
@@ -137,8 +159,8 @@ function buildComparison(
     rightName: string,
     rightValue: unknown,
   ): Comparison => ({
-    leftHeader: detailLabel(detail, 'left', labels.leftHeader),
-    rightHeader: detailLabel(detail, 'right', labels.rightHeader),
+    leftHeader: detailLabel(detail, 'left', dictionary.valueLc),
+    rightHeader: detailLabel(detail, 'right', dictionary.valueDoc),
     left: { name: leftName, value: formatComparedValue(leftValue) },
     right: { name: rightName, value: formatComparedValue(rightValue) },
   })
@@ -378,7 +400,11 @@ function CheckResults({
       )}
 
       <h3>{dictionary.results.passedHeading(passed.length)}</h3>
-      <button type="button" onClick={() => setShowPassed((current) => !current)}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => setShowPassed((current) => !current)}
+      >
         {showPassed
           ? dictionary.results.hidePassed
           : dictionary.results.showPassed}
@@ -421,6 +447,7 @@ function App() {
   const [expandedDocIds, setExpandedDocIds] = useState<string[]>([])
   const [presentationDate, setPresentationDate] = useState('')
   const [checkRun, setCheckRun] = useState<CheckRun | null>(null)
+  const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function changeLanguage(nextLanguage: Language) {
@@ -466,12 +493,12 @@ function App() {
     }
   }
 
-  async function uploadFile() {
+  async function uploadFile(selectedFile: File | null = file) {
     if (!setId) {
       setErrorKey('noSet')
       return
     }
-    if (!file) {
+    if (!selectedFile) {
       setErrorKey('noFile')
       return
     }
@@ -482,7 +509,7 @@ function App() {
 
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', selectedFile)
 
       const response = await fetch(
         `${API_URL}/document-sets/${setId}/documents`,
@@ -605,6 +632,38 @@ function App() {
     }
   }
 
+  function openFilePicker() {
+    if (!setId || busy) {
+      return
+    }
+    fileInputRef.current?.click()
+  }
+
+  async function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setDragOver(false)
+
+    if (!setId || busy) {
+      return
+    }
+
+    const droppedFile = event.dataTransfer.files?.[0] ?? null
+
+    if (!droppedFile) {
+      return
+    }
+
+    setFile(droppedFile)
+    await uploadFile(droppedFile)
+  }
+
+  function handleDropZoneKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openFilePicker()
+    }
+  }
+
   function toggleDocument(id: string) {
     setExpandedDocIds((current) =>
       current.includes(id)
@@ -615,31 +674,40 @@ function App() {
 
   return (
     <main>
-      <div className="language-switcher">
-        {LANGUAGE_OPTIONS.map((option) => (
-          <button
-            key={option.code}
-            type="button"
-            className={language === option.code ? 'active' : undefined}
-            onClick={() => changeLanguage(option.code)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      <h1>{dictionary.title}</h1>
+      <header className="page-header">
+        <h1>{dictionary.title}</h1>
+        <div className="language-switcher">
+          {LANGUAGE_OPTIONS.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              className={language === option.code ? 'active' : undefined}
+              onClick={() => changeLanguage(option.code)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
       {errorKey && <p className="error">{dictionary.errors[errorKey]}</p>}
       {messageKey && (
         <p className="message">{dictionary.messages[messageKey]}</p>
       )}
 
-      <section>
-        <h2>{dictionary.sectionUpload}</h2>
+      <section className="card">
+        <h2>
+          <span className="step">{dictionary.step1}</span> ·{' '}
+          {dictionary.sectionUpload}
+        </h2>
 
         <div className="actions">
-          <button type="button" onClick={createSet} disabled={busy}>
+          <button
+            type="button"
+            className="primary"
+            onClick={createSet}
+            disabled={busy}
+          >
             {dictionary.createSet}
           </button>
           {setId && (
@@ -649,26 +717,61 @@ function App() {
           )}
         </div>
 
-        <div className="actions">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf,text/plain"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            disabled={!setId || busy}
-          />
-          <button
-            type="button"
-            onClick={uploadFile}
-            disabled={!setId || !file || busy}
-          >
-            {dictionary.upload}
-          </button>
-        </div>
-      </section>
+        <input
+          ref={fileInputRef}
+          className="native-file-input"
+          type="file"
+          accept="application/pdf,text/plain"
+          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          disabled={!setId || busy}
+        />
 
-      <section>
-        <h2>{dictionary.sectionDocuments}</h2>
+        <div
+          className={`drop-zone${dragOver ? ' drag-over' : ''}${
+            !setId || busy ? ' disabled' : ''
+          }`}
+          onClick={openFilePicker}
+          onKeyDown={handleDropZoneKeyDown}
+          onDragEnter={(event) => {
+            event.preventDefault()
+            if (setId && !busy) {
+              setDragOver(true)
+            }
+          }}
+          onDragOver={(event) => {
+            event.preventDefault()
+            if (setId && !busy) {
+              setDragOver(true)
+            }
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault()
+            setDragOver(false)
+          }}
+          onDrop={handleDrop}
+          role="button"
+          tabIndex={!setId || busy ? -1 : 0}
+          aria-disabled={!setId || busy}
+        >
+          <span className="drop-hint">{dictionary.dropHint}</span>
+          <span className="drop-sub">{dictionary.dropSub}</span>
+          {file && <span className="drop-file">{file.name}</span>}
+        </div>
+
+        {file && (
+          <div className="actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => uploadFile()}
+              disabled={!setId || !file || busy}
+            >
+              {dictionary.upload}
+            </button>
+          </div>
+        )}
+
+        <h3>{dictionary.sectionDocuments}</h3>
         {documents.length === 0 ? (
           <p>{dictionary.noDocuments}</p>
         ) : (
@@ -683,12 +786,15 @@ function App() {
                     <span>
                       {document.originalName} ({formatSize(document.sizeBytes)})
                     </span>
-                    <span className="doc-type">
+                    <span
+                      className={`doc-type chip ${docTypeClass(document.docType)}`}
+                    >
                       {docTypeLabel(document.docType, dictionary)}
                     </span>
                   </div>
                   <button
                     type="button"
+                    className="secondary"
                     onClick={() => toggleDocument(document.id)}
                   >
                     {expanded
@@ -696,18 +802,20 @@ function App() {
                       : dictionary.showValues}
                   </button>
                   {expanded && (
-                    <div className="value-list">
+                    <>
                       {entries.length === 0 ? (
                         <p>{dictionary.noValues}</p>
                       ) : (
-                        entries.map((entry) => (
-                          <div className="value-row" key={entry.key}>
-                            <span className="value-key">{entry.key}</span>
-                            <span className="value-text">{entry.value}</span>
-                          </div>
-                        ))
+                        <dl className="value-list">
+                          {entries.map((entry) => (
+                            <div className="value-row" key={entry.key}>
+                              <dt className="value-key">{entry.key}</dt>
+                              <dd className="value-text">{entry.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
                       )}
-                    </div>
+                    </>
                   )}
                 </li>
               )
@@ -716,8 +824,11 @@ function App() {
         )}
       </section>
 
-      <section>
-        <h2>{dictionary.sectionPresentationDate}</h2>
+      <section className="card">
+        <h2>
+          <span className="step">{dictionary.step2}</span> ·{' '}
+          {dictionary.sectionPresentationDate}
+        </h2>
         <div className="date-field">
           <label htmlFor="presentation-date">
             {dictionary.presentationDateLabel}
@@ -733,6 +844,7 @@ function App() {
         <p className="helper">{dictionary.presentationDateHelper}</p>
         <button
           type="button"
+          className="secondary"
           onClick={savePresentationDate}
           disabled={!setId || !presentationDate || busy}
         >
@@ -740,14 +852,23 @@ function App() {
         </button>
       </section>
 
-      <section>
-        <h2>{dictionary.sectionCheck}</h2>
+      <section className="card">
+        <h2>
+          <span className="step">{dictionary.step3}</span> ·{' '}
+          {dictionary.sectionCheck}
+        </h2>
         <div className="actions">
-          <button type="button" onClick={runCheck} disabled={!setId || busy}>
+          <button
+            type="button"
+            className="primary"
+            onClick={runCheck}
+            disabled={!setId || busy}
+          >
             {dictionary.runCheck}
           </button>
           <button
             type="button"
+            className="secondary"
             onClick={downloadReport}
             disabled={!setId || !checkRun || busy}
           >
@@ -756,13 +877,23 @@ function App() {
         </div>
         {checkRun && (
           <>
-            <p className="check-summary">
-              {dictionary.summary(
-                countStatus(checkRun.results, 'PASS'),
-                countStatus(checkRun.results, 'FAIL'),
-                countStatus(checkRun.results, 'SKIPPED'),
-              )}
-            </p>
+            <div className="summary-chips">
+              <span className="summary-chip pass">
+                {dictionary.summaryPassed(
+                  countStatus(checkRun.results, 'PASS'),
+                )}
+              </span>
+              <span className="summary-chip fail">
+                {dictionary.summaryFailed(
+                  countStatus(checkRun.results, 'FAIL'),
+                )}
+              </span>
+              <span className="summary-chip skipped">
+                {dictionary.summarySkipped(
+                  countStatus(checkRun.results, 'SKIPPED'),
+                )}
+              </span>
+            </div>
             <CheckResults
               key={`${checkRun.id}-${language}`}
               run={checkRun}

@@ -2,6 +2,9 @@ export type Language = 'ko' | 'en' | 'ru'
 
 export type Dictionary = {
   title: string
+  step1: string
+  step2: string
+  step3: string
   sectionUpload: string
   sectionDocuments: string
   sectionPresentationDate: string
@@ -18,7 +21,14 @@ export type Dictionary = {
   savePresentationDate: string
   runCheck: string
   downloadReport: string
+  dropHint: string
+  dropSub: string
+  valueLc: string
+  valueDoc: string
   summary: (passed: number, failed: number, skipped: number) => string
+  summaryPassed: (count: number) => string
+  summaryFailed: (count: number) => string
+  summarySkipped: (count: number) => string
   docTypes: Record<string, string>
   ruleNames: Record<number, string>
   verdicts: Record<string, string>
@@ -107,6 +117,9 @@ export const LANGUAGE_STORAGE_KEY = 'lc-checker-language'
 export const dictionaries: Record<Language, Dictionary> = {
   ko: {
     title: '신용장 서류 대조',
+    step1: '1단계',
+    step2: '2단계',
+    step3: '3단계',
     sectionUpload: '서류 올리기',
     sectionDocuments: '올린 서류 목록',
     sectionPresentationDate: '제시일 입력',
@@ -123,8 +136,15 @@ export const dictionaries: Record<Language, Dictionary> = {
     savePresentationDate: '제시일 저장',
     runCheck: '검사 실행',
     downloadReport: '보고서 받기',
+    dropHint: '파일을 여기로 끌어다 놓거나 눌러서 선택하세요',
+    dropSub: 'PDF와 텍스트 파일만 됩니다',
+    valueLc: '신용장 값',
+    valueDoc: '서류 값',
     summary: (passed, failed, skipped) =>
       `검사 완료 — 통과 ${passed}개 · 불일치 ${failed}개 · 검사 못함 ${skipped}개`,
+    summaryPassed: (count) => `통과 ${count}개`,
+    summaryFailed: (count) => `불일치 ${count}개`,
+    summarySkipped: (count) => `검사 못함 ${count}개`,
     docTypes: {
       LC: '신용장',
       INVOICE: '상업송장',
@@ -230,6 +250,9 @@ export const dictionaries: Record<Language, Dictionary> = {
   },
   en: {
     title: 'LC Document Check',
+    step1: 'Step 1',
+    step2: 'Step 2',
+    step3: 'Step 3',
     sectionUpload: 'Upload documents',
     sectionDocuments: 'Uploaded documents',
     sectionPresentationDate: 'Presentation date',
@@ -247,8 +270,15 @@ export const dictionaries: Record<Language, Dictionary> = {
     savePresentationDate: 'Save presentation date',
     runCheck: 'Run check',
     downloadReport: 'Download report',
+    dropHint: 'Drag files here, or click to choose',
+    dropSub: 'PDF and text files only',
+    valueLc: 'Letter of credit',
+    valueDoc: 'Document',
     summary: (passed, failed, skipped) =>
       `Check complete — Passed ${passed} · Discrepancies ${failed} · Skipped ${skipped}`,
+    summaryPassed: (count) => `Passed ${count}`,
+    summaryFailed: (count) => `Discrepancies ${count}`,
+    summarySkipped: (count) => `Skipped ${count}`,
     docTypes: {
       LC: 'Letter of credit',
       INVOICE: 'Commercial invoice',
@@ -354,6 +384,9 @@ export const dictionaries: Record<Language, Dictionary> = {
   },
   ru: {
     title: 'Проверка документов по аккредитиву',
+    step1: 'Шаг 1',
+    step2: 'Шаг 2',
+    step3: 'Шаг 3',
     sectionUpload: 'Загрузка документов',
     sectionDocuments: 'Загруженные документы',
     sectionPresentationDate: 'Дата представления',
@@ -371,8 +404,15 @@ export const dictionaries: Record<Language, Dictionary> = {
     savePresentationDate: 'Сохранить дату представления',
     runCheck: 'Запустить проверку',
     downloadReport: 'Скачать отчёт',
+    dropHint: 'Перетащите файлы сюда или нажмите, чтобы выбрать',
+    dropSub: 'Только файлы PDF и текстовые файлы',
+    valueLc: 'Аккредитив',
+    valueDoc: 'Документ',
     summary: (passed, failed, skipped) =>
       `Проверка завершена — пройдено ${passed} · несоответствий ${failed} · пропущено ${skipped}`,
+    summaryPassed: (count) => `пройдено ${count}`,
+    summaryFailed: (count) => `несоответствий ${count}`,
+    summarySkipped: (count) => `пропущено ${count}`,
     docTypes: {
       LC: 'Аккредитив',
       INVOICE: 'Коммерческий инвойс',

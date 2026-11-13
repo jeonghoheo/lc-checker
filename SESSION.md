@@ -16,6 +16,7 @@
 - v1.0.1 (Block 14): provider-neutral LLM config (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL with DEEPSEEK_* fallback), .env.example with DeepSeek/OpenAI/OpenRouter/LiteLLM examples, README provider-neutral wording.
 - Block 15 — English and Russian README versions (done 2026-11-13)
 - Block 16 — UI in Korean, English, and Russian (done 2026-11-13); v1.1.0
+- Block 17 — light card UI redesign + custom upload area (done 2026-11-13); v1.2.0
 
 ## Block 15 — English and Russian README versions (done)
 
@@ -41,3 +42,37 @@ In apps/web:
 - Update the limits line about UI language in all three READMEs to match the new state: UI is available in Korean, English, and Russian; server-stored result messages and the report are Korean only for now.
 - Verify: `npm run build` and `npm run lint` pass; then a manual run with the UI switched to English — upload the set B files, run the check, and record in the log the English summary line and one FAIL row's rule name + AI note label as displayed. Repeat the summary-line check in Russian.
 - Create git tag `v1.1.0` on the final commit and push it.
+
+## Block 17 — UI redesign: light card layout + custom upload area (owner-approved direction) (done)
+
+Visual redesign ONLY. No behavior changes: same API calls, same state flow, same dictionary keys (plus the new ones listed below). Plain CSS in the existing stylesheet file(s) of apps/web. No new npm dependencies, no CSS framework, no component library.
+
+Design targets (approved mock):
+- Light "document" theme. Page background #eef0f3. Content column centered, max-width 760px, comfortable side padding.
+- Each step is a white card: background #ffffff, 1px solid #dde1e7 border, border-radius 12px, padding 16–20px, 12px gap between cards.
+- Accent color #2456c8 — used ONLY for: the primary button, step numbers, the selected language pill, links. Status colors: pass green #1e7a34 on #e6f4ea; fail red #c62f3b on #fdecec; skipped gray #5a6472 on #eceff3. Color means status, never decoration.
+- Header row: page title (20–22px, bold) on the left, language switcher on the right as pill buttons — selected = filled accent with white text; unselected = white background, 1px border #d5d9df, gray text.
+- Section headings inside cards: 15–16px bold, prefixed with a step label in the accent color, format "{step} · {heading}". New dictionary keys step1/step2/step3 — ko: "1단계" / "2단계" / "3단계"; en: "Step 1" / "Step 2" / "Step 3"; ru: "Шаг 1" / "Шаг 2" / "Шаг 3".
+- Buttons: primary (run check, create set) = filled accent, white text, border-radius 9px, padding 10px 22px. Secondary (report download, save date, toggles) = white background, 1px solid #c9d1dc border, same radius. Disabled state visibly muted.
+
+Custom upload area (this fixes the owner's complaint that the file picker stayed Korean in EN/RU UI — the browser's native file input renders in the browser's own language and cannot be translated):
+- Hide the native `<input type="file">` visually (keep it in the DOM and wired exactly as now). Build a custom drop zone: dashed 1.5px border #b9c2cf, background #f7f9fc, border-radius 10px, centered text. Clicking the zone opens the file picker (label or programmatic click). Support drag-over highlight (border switches to accent) and drop, reusing the same upload handler.
+- All drop-zone text comes from the dictionary. New keys: dropHint — ko "파일을 여기로 끌어다 놓거나 눌러서 선택하세요", en "Drag files here, or click to choose", ru "Перетащите файлы сюда или нажмите, чтобы выбрать"; dropSub — ko "PDF와 텍스트 파일만 됩니다", en "PDF and text files only", ru "Только файлы PDF и текстовые файлы".
+- The browser-native file input must NOT be visible anywhere in the UI when you are done.
+- Uploaded document rows: light rows (background #f7f9fc, 1px solid #e4e8ee, radius 8px), filename on the left, document-type chip on the right (small pill, 11–12px, semibold). Chip colors per type: 신용장/LC = #e3ebfd text #2456c8; 상업송장/invoice = #e6f4ea text #1e7a34; 선하증권/bill of lading = #fdf0e0 text #9a6206; 포장명세서/packing list = #e0f2f1 text #00695c; 보험증서/insurance = #f3e5f5 text #6a1b9a; 종류 미확인/unknown = #eceff3 text #5a6472.
+
+Presentation date: keep the native date input (its inner placeholder follows the browser locale — a known limit; record it in the log, do not claim it is translated). Style its border/radius to match the other controls, and keep the translated label + helper line from Block 16.
+
+Results area:
+- Summary line becomes three pill chips with the counts, using the status colors above (pass green, discrepancy red, skipped gray). The counts and wording stay exactly what the current summary strings produce — only the presentation changes.
+- Each discrepancy (FAIL) result is a card: left border 4px solid #e05260, background #fff7f7, radius 8px. Rule name as the card title (bold, dark red #a12633). Below it, the two compared values side by side in two white boxes (1px solid #ecd3d5, radius 8px), each with a small gray caption — the captions reuse the existing dictionary labels for the LC value and the document value; if no such keys exist, add: valueLc — ko "신용장 값", en "Letter of credit", ru "Аккредитив"; valueDoc — ko "서류 값", en "Document", ru "Документ". The result message goes under the boxes in plain text. The AI note, when present, sits in a subtle inner box (white background, 1px solid #e4e8ee) under the message.
+- On narrow screens the two value boxes stack vertically (flex-wrap is fine).
+- Passed results stay behind the existing collapsed toggle, rendered as quiet rows (no red/green card treatment — a small green status dot or the word PASS in green is enough). Skipped results render as quiet gray rows.
+- The extracted-values view keeps its content; present it as a simple two-column definition list inside its card.
+
+Verify:
+- `npm run build` and `npm run lint` pass in apps/web.
+- Manual run, set B, Korean UI: summary counts must still be pass 7 · discrepancy 6 · skipped 2 (functional regression check — the redesign must not change results).
+- Switch to English: confirm the drop-zone text is in English and no browser-native file input is visible; record the English dropHint line in the log. Switch to Russian: confirm the drop-zone text is in Russian; record it in the log.
+- Record in the log, honestly: the date input's inner placeholder still follows the browser locale (not translated by the page).
+- Create git tag `v1.2.0` on the final commit and push it (with the tag).
