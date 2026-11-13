@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -85,6 +85,34 @@ describe('Document sets upload (e2e)', () => {
       originalName: 'sample.txt',
       sizeBytes: Buffer.byteLength(content),
     });
+  });
+
+  it('returns the extracted text of an uploaded text document', async () => {
+    const setId = await createSet();
+    const samplePath = join(
+      process.cwd(),
+      '..',
+      '..',
+      'samples',
+      'set-a',
+      'lc-mt700.txt',
+    );
+    const content = await readFile(samplePath);
+
+    const upload = await request(app.getHttpServer())
+      .post(`/document-sets/${setId}/documents`)
+      .attach('file', content, {
+        filename: 'lc-mt700.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .get(`/document-sets/${setId}/documents/${upload.body.id}/text`)
+      .expect(200);
+
+    expect(response.body.text).toContain(':20: Documentary Credit Number');
+    expect(response.body.text).toContain('HNBC-260781-KR');
   });
 
   it('rejects a disallowed file type with 400', async () => {

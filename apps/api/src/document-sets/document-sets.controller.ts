@@ -54,6 +54,14 @@ export class DocumentSetsController {
     return this.documentSetsService.addDocument(id, file);
   }
 
+  @Get(':id/documents/:docId/text')
+  getDocumentText(
+    @Param('id') id: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.documentSetsService.getDocumentText(id, docId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.documentSetsService.getSet(id);
