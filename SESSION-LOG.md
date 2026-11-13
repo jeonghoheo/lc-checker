@@ -40,3 +40,31 @@
 - Done: Added `AiExtractionService` for DeepSeek's OpenAI-compatible JSON endpoint, `.env.example`, and `InvoiceExtractionService` with code-side validation. INVOICE documents are extracted automatically on upload; extraction or validation failures keep the upload with `extractedData = null`. Added mocked unit tests plus e2e tests for storing mocked invoice data and keeping an upload when extraction fails.
 - Tests: passed 9 / total 9 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors.
 - Notes: The required live DeepSeek run is blocked because `DEEPSEEK_API_KEY` is missing or empty in `apps/api/.env`. Stopped as required. Add `DEEPSEEK_API_KEY` (and optionally `DEEPSEEK_MODEL`) to `apps/api/.env` before the live run.
+- Live run (continued): after the key was added, the API was restarted and `samples/set-a/commercial-invoice.txt` was uploaded once. The upload returned 201 and GET document-set returned `docType: "INVOICE"` with:
+  ```json
+  {
+    "invoiceNumber": "HB-INV-2026-041",
+    "invoiceDate": "2026-11-24",
+    "sellerName": "Hanbyeol Packaging Co., Ltd.",
+    "buyerName": "Nordlys Cosmetics GmbH",
+    "lcNumber": "HNBC-260781-KR",
+    "currency": "USD",
+    "totalAmount": 48000,
+    "totalQuantity": 10000,
+    "items": [
+      {
+        "description": "Plastic cosmetic jars 50ml",
+        "quantity": 6000,
+        "unitPrice": 4.2,
+        "amount": 25200
+      },
+      {
+        "description": "Airless pump bottles 30ml",
+        "quantity": 4000,
+        "unitPrice": 5.7,
+        "amount": 22800
+      }
+    ]
+  }
+  ```
+  Validation passed and the values match the sample invoice. This supersedes the blocked note above.

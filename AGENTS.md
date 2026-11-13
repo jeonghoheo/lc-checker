@@ -12,14 +12,18 @@ plus a fee, so catching errors early is the whole point.
 - Session 1 done: concept and the 15 checking rules are fixed (below).
 - Session 2 done: skeleton + file upload + passing e2e tests,
   pushed to GitHub (public, jeonghoheo/lc-checker).
-- Session 3 blocks 1-3 done: text extraction for text/PDF,
-  document-type detection on upload, and an MT700 LC parser that
-  stores structured values in Document.extractedData (JSONB).
-  GET document-set returns both docType and extractedData.
+- Session 3 blocks 1-4 done: text extraction for text/PDF,
+  document-type detection on upload, an MT700 LC parser, and
+  DeepSeek AI extraction for commercial invoices with code-side
+  validation. Extracted values are stored in Document.extractedData
+  (JSONB); GET document-set returns both docType and extractedData.
 - Block 3 extra check passed on samples/set-c/lc-mt700.txt: the
   parsed documentsRequired includes CERTIFICATE OF ORIGIN, so the
   parser reads the actual file rather than hardcoded set A values.
-- No rule engine and no AI calls yet.
+- Block 4 live invoice extraction passed against the real DeepSeek
+  API (HB-INV-2026-041, USD 48,000, 10,000 units, 2 items).
+- Block 5 (packing list, bill of lading, insurance) is still pending.
+- No rule engine yet.
 
 ## How to run
 1. `docker compose up -d` in the root (PostgreSQL 16, port 5432,
