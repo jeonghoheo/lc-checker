@@ -19,6 +19,7 @@ export type CheckContext = {
   packingList: ExtractedPackingList | null;
   billOfLading: ExtractedBillOfLading | null;
   insurance: ExtractedInsurance | null;
+  uploadedDocTypes: string[];
 };
 
 function pass(
@@ -40,10 +41,6 @@ function skip(ruleNo: number, reason: string): RuleResult {
   return { ruleNo, status: 'SKIPPED', detail: { reason } };
 }
 
-function notImplemented(ruleNo: number): RuleResult {
-  return skip(ruleNo, 'not implemented yet');
-}
-
 function daysBetween(from: string, to: string): number {
   const fromTime = Date.parse(`${from}T00:00:00.000Z`);
   const toTime = Date.parse(`${to}T00:00:00.000Z`);
@@ -60,6 +57,34 @@ function parseTolerancePercent(value: string): number | null {
 
   const percent = Number(match[1].replace(',', '.'));
   return Number.isFinite(percent) ? percent : null;
+}
+
+function firstWord(value: string): string {
+  return value.trim().split(/\s+/)[0] ?? '';
+}
+
+function normalizeName(value: string): string {
+  const firstLine = value.split(/\r?\n/)[0] ?? '';
+  const beforeComma = firstLine.split(',')[0] ?? '';
+
+  return beforeComma.toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+function significantGoodsWords(goodsDescription: string): string[] {
+  const productDescription = goodsDescription.split(
+    /\b(?:AS PER|TRADE TERMS)\b/i,
+  )[0]!;
+  const excluded = new Set(['AND', 'WITH', 'FROM', 'ONLY', 'GOODS']);
+  const words = productDescription.toUpperCase().match(/[A-Z0-9]+/g) ?? [];
+
+  return [
+    ...new Set(
+      words.filter(
+        (word) =>
+          word.length >= 4 && /[A-Z]/.test(word) && !excluded.has(word),
+      ),
+    ),
+  ];
 }
 
 export function rule1(context: CheckContext): RuleResult {
@@ -167,8 +192,54 @@ export function rule3(context: CheckContext): RuleResult {
   );
 }
 
-export function rule4(): RuleResult {
-  return notImplemented(4);
+export function rule4(context: CheckContext): RuleResult {
+  if (!context.insurance) {
+    return skip(4, 'insurance document is missing');
+  }
+
+  if (!context.billOfLading) {
+    return skip(4, 'bill of lading document is missing');
+  }
+
+  if (!context.insurance.issueDate) {
+    return skip(4, 'insurance issueDate is missing');
+  }
+
+  let shipmentDate = context.billOfLading.shippedOnBoardDate;
+  let fallback: string | undefined;
+
+  if (!shipmentDate) {
+    shipmentDate = context.billOfLading.issueDate;
+    fallback = 'blIssueDate';
+  }
+
+  if (!shipmentDate) {
+    return skip(4, 'shipment date is unavailable');
+  }
+
+  const compared = {
+    insuranceIssueDate: context.insurance.issueDate,
+    shipmentDate,
+    ...(fallback ? { fallback } : {}),
+  };
+  const detail: Record<string, unknown> = { compared };
+
+  if (fallback) {
+    detail.fallback = fallback;
+  }
+
+  if (context.insurance.issueDate <= shipmentDate) {
+    return { ruleNo: 4, status: 'PASS', detail };
+  }
+
+  return {
+    ruleNo: 4,
+    status: 'FAIL',
+    detail: {
+      ...detail,
+      message: `Insurance issue date ${context.insurance.issueDate} is after shipment date ${shipmentDate}.`,
+    },
+  };
 }
 
 export function rule5(context: CheckContext): RuleResult {
@@ -339,16 +410,288 @@ export function rule8(context: CheckContext): RuleResult {
   );
 }
 
+export function rule9(context: CheckContext): RuleResult {
+  if (!context.lc) {
+    return skip(9, 'LC document is missing');
+  }
+
+  if (!context.lc.goodsDescription) {
+    return skip(9, 'LC goodsDescription is missing');
+  }
+
+  if (!context.invoice) {
+    return skip(9, 'commercial invoice document is missing');
+  }
+
+  if (
+    !Array.isArray(context.invoice.items) ||
+    context.invoice.items.length === 0
+  ) {
+    return skip(9, 'invoice items are missing');
+  }
+
+  const significantWords = significantGoodsWords(context.lc.goodsDescription);
+  const invoiceDescriptions = context.invoice.items
+    .map((item) => item.description)
+    .join(' ')
+    .toUpperCase();
+  const missingWords = significantWords.filter(
+    (word) => !invoiceDescriptions.includes(word),
+  );
+  const compared = {
+    goodsDescription: context.lc.goodsDescription,
+    significantWords,
+    invoiceItemDescriptions: context.invoice.items.map(
+      (item) => item.description,
+    ),
+    missingWords,
+  };
+
+  if (missingWords.length === 0) {
+    return pass(9, compared);
+  }
+
+  return fail(
+    9,
+    `Invoice item descriptions are missing LC goods words: ${missingWords.join(', ')}.`,
+    compared,
+  );
+}
+
+export function rule10(context: CheckContext): RuleResult {
+  if (!context.lc) {
+    return skip(10, 'LC document is missing');
+  }
+
+  if (!context.billOfLading) {
+    return skip(10, 'bill of lading document is missing');
+  }
+
+  if (!context.lc.portOfLoading || !context.lc.portOfDischarge) {
+    return skip(10, 'LC ports are missing');
+  }
+
+  if (
+    !context.billOfLading.portOfLoading ||
+    !context.billOfLading.portOfDischarge
+  ) {
+    return skip(10, 'bill of lading ports are missing');
+  }
+
+  const lcLoadingWord = firstWord(context.lc.portOfLoading);
+  const lcDischargeWord = firstWord(context.lc.portOfDischarge);
+
+  if (!lcLoadingWord || !lcDischargeWord) {
+    return skip(10, 'LC ports are missing');
+  }
+
+  const loadingPasses = context.billOfLading.portOfLoading
+    .toUpperCase()
+    .includes(lcLoadingWord.toUpperCase());
+  const dischargePasses = context.billOfLading.portOfDischarge
+    .toUpperCase()
+    .includes(lcDischargeWord.toUpperCase());
+  const compared = {
+    lcPortOfLoading: context.lc.portOfLoading,
+    billOfLadingPortOfLoading: context.billOfLading.portOfLoading,
+    lcPortOfDischarge: context.lc.portOfDischarge,
+    billOfLadingPortOfDischarge: context.billOfLading.portOfDischarge,
+  };
+
+  if (loadingPasses && dischargePasses) {
+    return pass(10, compared);
+  }
+
+  const messages: string[] = [];
+
+  if (!loadingPasses) {
+    messages.push(
+      `Port of loading mismatch: LC "${context.lc.portOfLoading}" vs B/L "${context.billOfLading.portOfLoading}".`,
+    );
+  }
+
+  if (!dischargePasses) {
+    messages.push(
+      `Port of discharge mismatch: LC "${context.lc.portOfDischarge}" vs B/L "${context.billOfLading.portOfDischarge}".`,
+    );
+  }
+
+  return fail(10, messages.join(' '), compared);
+}
+
+export function rule11(context: CheckContext): RuleResult {
+  if (!context.lc) {
+    return skip(11, 'LC document is missing');
+  }
+
+  if (!context.lc.applicant) {
+    return skip(11, 'LC applicant is missing');
+  }
+
+  if (!context.billOfLading) {
+    return skip(11, 'bill of lading document is missing');
+  }
+
+  if (!context.billOfLading.consignee) {
+    return skip(11, 'bill of lading consignee is missing');
+  }
+
+  const lcName = normalizeName(context.lc.applicant);
+  const blName = normalizeName(context.billOfLading.consignee);
+  const compared = {
+    billOfLadingConsignee: context.billOfLading.consignee,
+    lcApplicant: context.lc.applicant,
+    normalizedBillOfLadingConsignee: blName,
+    normalizedLcApplicant: lcName,
+  };
+
+  if (blName === lcName) {
+    return pass(11, compared);
+  }
+
+  return fail(
+    11,
+    `Bill of lading consignee "${context.billOfLading.consignee}" does not match LC applicant "${context.lc.applicant}".`,
+    compared,
+  );
+}
+
+export function rule12(context: CheckContext): RuleResult {
+  if (!context.lc) {
+    return skip(12, 'LC document is missing');
+  }
+
+  if (!context.lc.applicant) {
+    return skip(12, 'LC applicant is missing');
+  }
+
+  if (!context.billOfLading) {
+    return skip(12, 'bill of lading document is missing');
+  }
+
+  if (!context.billOfLading.notifyParty) {
+    return skip(12, 'bill of lading notifyParty is missing');
+  }
+
+  const lcName = normalizeName(context.lc.applicant);
+  const blName = normalizeName(context.billOfLading.notifyParty);
+  const compared = {
+    billOfLadingNotifyParty: context.billOfLading.notifyParty,
+    lcApplicant: context.lc.applicant,
+    normalizedBillOfLadingNotifyParty: blName,
+    normalizedLcApplicant: lcName,
+  };
+
+  if (blName === lcName) {
+    return pass(12, compared);
+  }
+
+  return fail(
+    12,
+    `Bill of lading notify party "${context.billOfLading.notifyParty}" does not match LC applicant "${context.lc.applicant}".`,
+    compared,
+  );
+}
+
+export function rule13(context: CheckContext): RuleResult {
+  if (!context.lc) {
+    return skip(13, 'LC document is missing');
+  }
+
+  if (!context.lc.documentsRequired) {
+    return skip(13, 'LC documentsRequired is missing');
+  }
+
+  const requiredText = context.lc.documentsRequired.toUpperCase();
+  const requiredTypes: string[] = [];
+
+  if (requiredText.includes('CERTIFICATE OF ORIGIN')) {
+    requiredTypes.push('ORIGIN_CERTIFICATE');
+  }
+
+  if (
+    requiredText.includes('INSURANCE CERTIFICATE') ||
+    requiredText.includes('INSURANCE POLICY')
+  ) {
+    requiredTypes.push('INSURANCE');
+  }
+
+  if (requiredText.includes('COMMERCIAL INVOICE')) {
+    requiredTypes.push('INVOICE');
+  }
+
+  if (requiredText.includes('PACKING LIST')) {
+    requiredTypes.push('PACKING_LIST');
+  }
+
+  if (
+    requiredText.includes('BILL OF LADING') ||
+    requiredText.includes('BILLS OF LADING')
+  ) {
+    requiredTypes.push('BILL_OF_LADING');
+  }
+
+  const uploadedTypes = new Set(context.uploadedDocTypes);
+  const missingTypes = requiredTypes.filter(
+    (requiredType) => !uploadedTypes.has(requiredType),
+  );
+  const compared = {
+    requiredTypes,
+    missingTypes,
+    uploadedDocTypes: [...uploadedTypes],
+  };
+
+  if (missingTypes.length === 0) {
+    return pass(13, compared);
+  }
+
+  return fail(
+    13,
+    `Required document types are not uploaded: ${missingTypes.join(', ')}.`,
+    compared,
+  );
+}
+
+export function rule14(context: CheckContext): RuleResult {
+  if (!context.billOfLading) {
+    return skip(14, 'bill of lading document is missing');
+  }
+
+  const compared = {
+    shippedOnBoardDate: context.billOfLading.shippedOnBoardDate,
+  };
+
+  if (context.billOfLading.shippedOnBoardDate) {
+    return pass(14, compared);
+  }
+
+  return fail(
+    14,
+    'Bill of lading has no on-board notation.',
+    compared,
+  );
+}
+
+export function rule15(): RuleResult {
+  return skip(15, 'endorsement is not extracted in v1');
+}
+
 export function evaluateRules(context: CheckContext): RuleResult[] {
   return [
     rule1(context),
     rule2(context),
     rule3(context),
-    rule4(),
+    rule4(context),
     rule5(context),
     rule6(context),
     rule7(context),
     rule8(context),
-    ...Array.from({ length: 7 }, (_, index) => notImplemented(index + 9)),
+    rule9(context),
+    rule10(context),
+    rule11(context),
+    rule12(context),
+    rule13(context),
+    rule14(context),
+    rule15(),
   ];
 }

@@ -71,6 +71,13 @@ export class ChecksService {
         set.documents,
         'INSURANCE',
       ),
+      uploadedDocTypes: [
+        ...new Set(
+          set.documents
+            .map((document) => document.docType)
+            .filter((docType): docType is string => docType !== null),
+        ),
+      ],
     };
   }
 

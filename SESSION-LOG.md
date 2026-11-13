@@ -131,3 +131,8 @@
 - Done: Added nullable `presentationDate` (DATE) to `DocumentSet`, `CheckRun` and `CheckResult` tables, `PATCH /document-sets/:id/presentation-date`, and `POST /document-sets/:id/check`. A check run stores 15 results. Added the B/L `issueDate` extraction field and pure rule functions for rules 1-8; rules 4 and 9-15 return SKIPPED "not implemented yet" as specified.
 - Tests: passed 29 / total 29 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors. Manual endpoint run stored 15 results: rules 1, 2, 3, 5, 6, 7, 8 PASS and rules 4, 9-15 SKIPPED for clean set A with presentationDate `2026-12-10`.
 - Notes: No failures. The check response includes the run plus ordered results; FAIL details store a message and both compared values.
+
+## Block 7 — Rules 9-15 (cross-checks and presence) (2026-11-13)
+- Done: Implemented rule 4 (insurance issue date with B/L issue-date fallback) and rules 9-15: deterministic goods-word check, port checks, consignee/notify name comparison, required-document presence, on-board notation, and the v1 endorsement skip. Added `uploadedDocTypes` to the check context so rule 13 uses actual uploaded document types.
+- Tests: passed 44 / total 44 (vitest unit), passed 6 / total 6 (e2e). Lint has no errors. Each implemented rule has pass and fail unit cases from the sample values.
+- Notes: Rule 9 checks significant product words before any "AS PER" or "TRADE TERMS" boilerplate and ignores numeric-only tokens, preventing false failures from proforma/trade-term text. No failures.

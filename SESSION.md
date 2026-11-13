@@ -15,6 +15,7 @@
 ## Done so far
 - Session 3 complete (2026-11-13): text extraction, document type detection, LC parser (hardcoding check passed on set C), AI extraction for invoice / packing list / bill of lading / insurance — live DeepSeek runs verified against known sample values.
 - Block 6 — check plumbing + rules 1-8 (done 2026-11-13)
+- Block 7 — rules 9-15 (done 2026-11-13)
 
 ## Shared definitions for Session 4 (all blocks)
 - A check runs over one DocumentSet. Inputs are the documents' extractedData plus the set's presentationDate.
@@ -43,7 +44,7 @@ In apps/api:
 - Unit tests for rules 1-8: for each rule one passing case and one failing case built from the sample values (e.g. rule 1 fails with shipped 2026-12-02 vs deadline 2026-11-30; rule 5 fails with invoice 48,500 vs LC 48,000).
 Run the tests and show me the results.
 
-## Block 7 — Rules 9-15 (cross-checks and presence)
+## Block 7 — Rules 9-15 (cross-checks and presence) (done)
 
 Implement the remaining rules as pure functions over extractedData:
   9. Goods description: take significant words from the LC goodsDescription (words of length >= 4, excluding AND/WITH/FROM/ONLY/GOODS), uppercase. FAIL if any significant word is missing from the invoice items' descriptions joined together (case-insensitive). The FAIL detail lists the missing words. (Semantic/fuzzy matching is a later session; this block is the deterministic word check.)

@@ -1,4 +1,22 @@
-import { CheckContext, evaluateRules, rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8 } from './rules.js';
+import {
+  CheckContext,
+  evaluateRules,
+  rule1,
+  rule2,
+  rule3,
+  rule4,
+  rule5,
+  rule6,
+  rule7,
+  rule8,
+  rule9,
+  rule10,
+  rule11,
+  rule12,
+  rule13,
+  rule14,
+  rule15,
+} from './rules.js';
 
 const lc = {
   creditNumber: 'HNBC-260781-KR',
@@ -77,6 +95,17 @@ const billOfLading = {
   cleanOnBoard: false,
 };
 
+const insurance = {
+  certificateNumber: 'MI-CERT-2026-1187',
+  policyNumber: 'MI-POL-2026-0092',
+  issueDate: '2026-11-24',
+  assured: 'Hanbyeol Packaging Co., Ltd.',
+  currency: 'USD',
+  sumInsured: 53350,
+  voyageFrom: 'Busan Port, Republic of Korea',
+  voyageTo: 'Hamburg Port, Germany',
+};
+
 function baseContext(presentationDate = '2026-12-10'): CheckContext {
   return {
     presentationDate,
@@ -84,7 +113,14 @@ function baseContext(presentationDate = '2026-12-10'): CheckContext {
     invoice: { ...invoice, items: invoice.items.map((item) => ({ ...item })) },
     packingList: { ...packingList },
     billOfLading: { ...billOfLading },
-    insurance: null,
+    insurance: { ...insurance },
+    uploadedDocTypes: [
+      'LC',
+      'INVOICE',
+      'PACKING_LIST',
+      'BILL_OF_LADING',
+      'INSURANCE',
+    ],
   };
 }
 
@@ -133,12 +169,31 @@ describe('rule 3 — LC expiry', () => {
 });
 
 describe('rule 4 — insurance date', () => {
-  it('is skipped until Block 7 implements it', () => {
-    expect(rule4()).toMatchObject({
-      ruleNo: 4,
-      status: 'SKIPPED',
-      detail: { reason: 'not implemented yet' },
-    });
+  it('passes when insurance is dated on or before shipment', () => {
+    expect(rule4(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when insurance is dated after shipment', () => {
+    const context = baseContext();
+    context.insurance = {
+      ...context.insurance!,
+      issueDate: '2026-11-28',
+    };
+
+    expect(rule4(context).status).toBe('FAIL');
+  });
+
+  it('falls back to the B/L issue date when shipped on board is null', () => {
+    const context = baseContext();
+    context.billOfLading = {
+      ...context.billOfLading!,
+      shippedOnBoardDate: null,
+    };
+
+    const result = rule4(context);
+
+    expect(result.status).toBe('PASS');
+    expect(result.detail).toMatchObject({ fallback: 'blIssueDate' });
   });
 });
 
@@ -200,8 +255,127 @@ describe('rule 8 — carton count', () => {
   });
 });
 
+describe('rule 9 — goods description words', () => {
+  it('passes when invoice items contain the LC goods words', () => {
+    expect(rule9(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when AIRLESS is missing from the invoice items', () => {
+    const context = baseContext();
+    context.invoice = {
+      ...context.invoice!,
+      items: [
+        { ...context.invoice!.items[0]! },
+        { ...context.invoice!.items[1]!, description: 'Pump bottles 30ml' },
+      ],
+    };
+
+    const result = rule9(context);
+
+    expect(result.status).toBe('FAIL');
+    expect(result.detail).toMatchObject({
+      compared: { missingWords: ['AIRLESS'] },
+    });
+  });
+});
+
+describe('rule 10 — ports', () => {
+  it('passes when B/L ports contain the LC port names', () => {
+    expect(rule10(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when the B/L discharge port does not match', () => {
+    const context = baseContext();
+    context.billOfLading = {
+      ...context.billOfLading!,
+      portOfDischarge: 'ROTTERDAM, NETHERLANDS',
+    };
+
+    expect(rule10(context).status).toBe('FAIL');
+  });
+});
+
+describe('rule 11 — consignee name', () => {
+  it('passes when the B/L consignee matches the LC applicant', () => {
+    expect(rule11(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when the B/L consignee differs', () => {
+    const context = baseContext();
+    context.billOfLading = {
+      ...context.billOfLading!,
+      consignee: 'OTHER COMPANY',
+    };
+
+    expect(rule11(context).status).toBe('FAIL');
+  });
+});
+
+describe('rule 12 — notify party name', () => {
+  it('passes when the B/L notify party matches the LC applicant', () => {
+    expect(rule12(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when the B/L notify party differs', () => {
+    const context = baseContext();
+    context.billOfLading = {
+      ...context.billOfLading!,
+      notifyParty: 'NORDLYS LOGISTICS GMBH',
+    };
+
+    expect(rule12(context).status).toBe('FAIL');
+  });
+});
+
+describe('rule 13 — required documents present', () => {
+  it('passes when every required document type is uploaded', () => {
+    expect(rule13(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when the LC requires an origin certificate', () => {
+    const context = baseContext();
+    context.lc = {
+      ...context.lc!,
+      documentsRequired: `${context.lc!.documentsRequired}\n4. CERTIFICATE OF ORIGIN IN 1 COPY.`,
+    };
+
+    const result = rule13(context);
+
+    expect(result.status).toBe('FAIL');
+    expect(result.detail).toMatchObject({
+      compared: { missingTypes: ['ORIGIN_CERTIFICATE'] },
+    });
+  });
+});
+
+describe('rule 14 — on-board notation', () => {
+  it('passes when the B/L has a shipped-on-board date', () => {
+    expect(rule14(baseContext()).status).toBe('PASS');
+  });
+
+  it('fails when the B/L has no shipped-on-board date', () => {
+    const context = baseContext();
+    context.billOfLading = {
+      ...context.billOfLading!,
+      shippedOnBoardDate: null,
+    };
+
+    expect(rule14(context).status).toBe('FAIL');
+  });
+});
+
+describe('rule 15 — endorsement', () => {
+  it('is always skipped in v1', () => {
+    expect(rule15()).toMatchObject({
+      ruleNo: 15,
+      status: 'SKIPPED',
+      detail: { reason: 'endorsement is not extracted in v1' },
+    });
+  });
+});
+
 describe('evaluateRules', () => {
-  it('returns all 15 rule results and skips rules 4 and 9-15', () => {
+  it('returns all 15 rule results, with only rule 15 skipped for clean data', () => {
     const results = evaluateRules(baseContext());
 
     expect(results.map((result) => result.ruleNo)).toEqual(
@@ -211,6 +385,6 @@ describe('evaluateRules', () => {
       results
         .filter((result) => result.status === 'SKIPPED')
         .map((result) => result.ruleNo),
-    ).toEqual([4, 9, 10, 11, 12, 13, 14, 15]);
+    ).toEqual([15]);
   });
 });
