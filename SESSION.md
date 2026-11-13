@@ -1,4 +1,4 @@
-# SESSION.md — Session 5 work orders (written by the reviewer, executed by OpenCode)
+# SESSION.md — Session 6 work orders (written by the reviewer, executed by OpenCode)
 
 ## Working rules (fixed)
 - When the owner says "Run Block N", execute only Block N below. One block at a time.
@@ -13,24 +13,31 @@
 - At the end of the last block of a session, also update the Current status section of AGENTS.md and push it together.
 
 ## Done so far
-- Session 3 complete (2026-11-13): extraction for all 5 document types, live-verified.
-- Session 4 complete (2026-11-13): rule engine, all 15 rules. Scoring run: planted errors caught 12 / 12, zero false positives on the trap items (unit 44, e2e 9).
-- Block 9 — AI second opinion on borderline failures (done 2026-11-13); session 5 complete.
+- Sessions 3-4 complete: extraction (5 document types) and the 15-rule engine. Scoring: planted errors 12 / 12, zero false positives.
+- Session 5 complete: AI second opinion (aiReview) stored on FAIL results of rules 9, 11, 12. Live spot checks: set B rule 9 -> "discrepancy"; one-letter company-name typo -> "likely_typo".
+- Block 10 — full web flow (done 2026-11-13)
 
-## Block 9 — AI second opinion on borderline failures (session 5) (done)
+## Design rules for all screens (owner's standing rules)
+- Korean UI. Plain, short sentences. No abbreviation without spelling it out once.
+- Buttons say the action as a verb ("검사 실행", "보고서 받기").
+- Progress and results use concrete numbers ("불일치 6개" not "몇 개 문제").
+- Keep it one simple page flow; no new libraries for styling — plain CSS in the existing style file.
 
-Idea: three rules fail on text differences that a word comparison cannot judge — rule 9 (goods description wording), rule 11 (consignee name), rule 12 (notify party name). A one-letter typo is not the same problem as a different company or a missing product word. Add an AI second opinion to those FAILs. The deterministic FAIL always stands; the AI only adds an advisory note that the review screen will show later.
+## Block 10 — Wire the full flow into the web page (done)
 
-In apps/api:
-- Add an AiReviewService using the existing DeepSeek setup (same env vars). Input: the rule number, the two compared values, and the rule's FAIL detail. Output JSON: { "verdict": ..., "reason": "one short sentence" }.
-  - For rule 9, verdict is one of: "corresponds" (different wording, same goods), "discrepancy" (goods description really differs), "unsure".
-  - For rules 11-12, verdict is one of: "likely_typo" (same company, small typing difference), "different" (a different company), "unsure".
-  - The prompt must include the UCP 600 idea in plain words: invoice description must correspond to the LC description (Art. 18(c)); data must not conflict (Art. 14(d)) — exact sameness is not required.
-- In the check flow (POST /document-sets/:id/check), after the deterministic results are stored, run the AI review for FAIL results of rules 9, 11, 12 only, and store the result inside that CheckResult's detail as `aiReview`. If DEEPSEEK_API_KEY is missing or the call fails, skip the review and leave aiReview absent — the check must still complete normally.
-- Unit tests with a mocked AI client (no live calls): (a) rule 9 FAIL with a missing product word returns verdict "discrepancy" in the stored detail; (b) rule 11 FAIL with consignee "NORDLYS COSMETICS GMBH" vs LC applicant "NORDLYS COSMETICS GMBH" returns verdict "likely_typo"; (c) with the AI client failing, the check still completes and aiReview is absent.
-- The session 4 scoring e2e test must still pass unchanged (statuses are not affected by aiReview).
-- Live spot checks (real API), recorded in the log with the AI's verdict and reason:
-  1. Set B's rule 9 case: LC description vs the set B invoice items (missing "Airless"). Expected verdict: "discrepancy".
-  2. A synthetic typo case for rule 11: consignee "NORDLYS COSMETICS GMBH" vs applicant "NORDLYS COSMETICS GMBH". Expected verdict: "likely_typo".
-  If a live verdict differs from the expected one, record what actually came back — do not tune the test to hide it.
-Run the tests and show me the results.
+In apps/web, extend the existing upload page into the full flow on one page, in this order:
+1. 서류 올리기 (existing upload, keep as is).
+2. 올린 서류 목록: each document shows its detected type in Korean (신용장 / 상업송장 / 포장명세서 / 선하증권 / 보험증서 / 종류 미확인) and a "뽑은 값 보기" toggle that renders its extractedData as simple key-value rows.
+3. 제시일 입력: a date input labeled "은행에 서류를 내는 날짜" with one helper line: "이 날짜가 있어야 제시 기한 검사가 돌아갑니다." Save via the presentation-date endpoint.
+4. "검사 실행" button that calls POST /document-sets/:id/check and then shows the result summary line: "검사 완료 — 통과 X개 · 불일치 Y개 · 검사 못함 Z개" (counts from the returned results).
+- Handle errors plainly: if the API call fails, show "검사에 실패했습니다. 서버가 켜져 있는지 확인해 주세요." style messages, never raw error JSON.
+- Verify: `npm run build` in apps/web passes, and record a manual run in the log (upload the four set B files through the page, set presentation date 2026-12-25, run the check, and write down the summary counts the page showed — expected: 통과 7 · 불일치 6 · 검사 못함 2).
+
+## Block 11 — Results view (what does not match, first)
+
+Below the summary line from Block 10, render the check results:
+- Order: 불일치(FAIL) first, then 검사 못함(SKIPPED), then 통과(PASS) as a collapsed list (a "통과한 검사 보기" toggle).
+- Each FAIL row shows: the rule's plain Korean name (mapping below), the two compared values side by side with labels (left: "신용장·기준 값", right: "서류 값" — use the labels stored in the result detail when present), the result message in one short line, and, when detail.aiReview exists, a small note box: "AI 참고 의견: " + verdict in Korean (corresponds -> "같은 물품으로 보임", discrepancy -> "실제로 다름", likely_typo -> "오타로 보임", different -> "다른 회사로 보임", unsure -> "판단 보류") + the reason sentence.
+- Each SKIPPED row shows the rule name and the skip reason in plain words.
+- Rule name mapping (Korean): 1 선적 마감일, 2 제시 기한 (21일), 3 신용장 만료일, 4 보험 날짜, 5 송장 금액 한도, 6 총중량 일치, 7 수량 일치, 8 상자 수 일치, 9 물품 설명 대응, 10 항구 일치, 11 수하인 일치, 12 통지처 일치, 13 요구 서류 구비, 14 본선적재 표기, 15 배서 (이번 버전 검사 제외).
+- Verify: `npm run build` passes, plus the same manual set B run as Block 10 — record in the log that the 6 FAIL rows appear first with both values shown, and that the rule 9 row shows the AI note.

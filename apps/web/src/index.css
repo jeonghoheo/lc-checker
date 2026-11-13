@@ -62,3 +62,74 @@ button:disabled {
 ul {
   padding-left: 20px;
 }
+
+section + section {
+  margin-top: 28px;
+}
+
+.document-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.document-item {
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.document-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.doc-type {
+  font-weight: 600;
+}
+
+.value-list {
+  margin-top: 8px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 8px;
+}
+
+.value-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.value-key {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.value-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.date-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.helper {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 6px 0 10px;
+}
+
+.check-summary {
+  font-weight: 600;
+  margin-top: 12px;
+}

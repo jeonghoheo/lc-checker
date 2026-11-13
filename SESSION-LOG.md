@@ -158,3 +158,9 @@
   1. Set B rule 9 (invoice items missing "Airless"): verdict `discrepancy`, reason: "The invoice omits the LC goods word \"AIRLESS\" from the pump bottles description, so the invoice description does not correspond to the LC description under Art. 18(c)."
   2. Synthetic rule 11 typo (consignee `NORDLYS COSMETIC GMBH` missing the "S" in COSMETICS vs applicant `NORDLYS COSMETICS GMBH`): verdict `likely_typo`, reason: "The consignee name differs from the LC applicant only by a missing \"S\" in \"COSMETICS\", with the address otherwise identical, indicating a likely typo."
 - Notes: The session 4 scoring e2e test still asserts the same exact FAIL statuses and passes. The SESSION.md wording listed identical names for the rule 11 spot check, so a one-letter synthetic typo was used to create an actual rule 11 FAIL. Session 5 is complete.
+
+## Block 10 — Wire the full flow into the web page (2026-11-13)
+- Done: Extended `apps/web/src/App.tsx` into the one-page flow: upload, document list with Korean type labels and a "뽑은 값 보기" toggle, presentation-date save, and "검사 실행" with the summary line. Added plain CSS for the document list, extracted values, date field, and summary. New API failures show friendly Korean messages instead of raw JSON.
+- Tests: `npm run build` passed in `apps/web`; `npm run lint` passed.
+- Manual run: uploaded the four set B files through the page, saved presentation date `2026-12-25`, and ran the check. The page showed "검사 완료 — 통과 7개 · 불일치 6개 · 검사 못함 2개", matching the expected counts. The document list showed 신용장 / 상업송장 / 포장명세서 / 선하증권, and the extracted-value toggles rendered key-value rows.
+- Notes: No new styling library was added. No failures.
