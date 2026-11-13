@@ -1,3 +1,5 @@
+한국어 | [English](README.en.md) | [Русский](README.ru.md)
+
 # LC Checker
 
 **English summary:** LC Checker is a pre-check tool for exporters. It uploads an MT700 letter of credit and shipping documents, extracts the key values, and checks them against 15 deterministic rules before bank presentation. It does not guarantee the bank's final decision.

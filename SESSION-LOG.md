@@ -187,3 +187,8 @@
 - Tests: passed 49 / total 49 (vitest unit), passed 10 / total 10 (e2e). Lint has no errors.
 - Live check: ran one invoice extraction with the real API through the new config path. `LLM_*` was unset, so the key came from `DEEPSEEK_API_KEY`, the base URL came from the default `https://api.deepseek.com`, and the model came from the default `deepseek-chat`. The set A invoice extracted as `HB-INV-2026-041`, USD `48000`.
 - Notes: v1.0.1 tag is created on the final commit. No failures.
+
+## Block 15 — English and Russian README versions (2026-11-13)
+- Done: Created `README.en.md` and `README.ru.md` as full translations of the current README, preserving the 3-step flow, local setup, provider-neutral LLM wording, 15-rule table with UCP 600 references, A/B/C scoring, and honest limits. Added the language line at the very top of all three README files with the correct cross-links.
+- Tests: Documentation-only block; no code changes. Verified all three files render with the same structure: 13 headings, 27 table rows, and 10 code fences each. The first line of each file is the correct language selector.
+- Notes: The "Korean UI only" limits line was intentionally left unchanged in this block; Block 16 updates it. No failures.
